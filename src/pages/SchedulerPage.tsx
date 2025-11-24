@@ -8,6 +8,9 @@ import {
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
 
+/* =========================================================
+   Types
+   ========================================================= */
 interface RowState {
   tester_id: string;
   start_date: string;
@@ -16,8 +19,23 @@ interface RowState {
   dirty?: boolean;
 }
 
-/* Helpers */
+type DuplicateModalProps = {
+  source: string | null;
+  duplicateUnitIdsText: string;
+  setDuplicateUnitIdsText: (v: string) => void;
+  duplicateShiftDays: number;
+  setDuplicateShiftDays: (n: number) => void;
+  onClose: () => void;
+  onConfirm: (
+    sourceUnit: string,
+    newUnitIds: string[],
+    shiftDays: number
+  ) => Promise<void>;
+};
 
+/* =========================================================
+   Helpers  (unchanged)
+   ========================================================= */
 function isoDateFromBackend(value?: string | null): string {
   if (!value) return "";
   return value.slice(0, 10);
@@ -41,6 +59,92 @@ function addDays(dateStr: string, days: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+/* =========================================================
+   ✅ Duplicate Modal (MOVED OUTSIDE SchedulerPage)
+   This prevents remounting & focus loss while typing.
+   ========================================================= */
+function DuplicateModal({
+  source,
+  duplicateUnitIdsText,
+  setDuplicateUnitIdsText,
+  duplicateShiftDays,
+  setDuplicateShiftDays,
+  onClose,
+  onConfirm,
+}: DuplicateModalProps) {
+  const parsedNewUnits = duplicateUnitIdsText
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        <h2>Duplicate Schedule</h2>
+
+        {/* aligned 3-input row */}
+        <div className="dup-row">
+          <div className="dup-field">
+            <label className="dup-label">Source Unit:</label>
+            <input className="dup-input" value={source || ""} disabled />
+          </div>
+
+          <div className="dup-field">
+            <label className="dup-label">
+              New Unit IDs (multiple units use comma to separate):
+            </label>
+            <textarea
+              className="dup-input dup-textarea"
+              rows={1}
+              value={duplicateUnitIdsText}
+              onChange={(e) => setDuplicateUnitIdsText(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="dup-field">
+            <label className="dup-label">Shift by Days:</label>
+            <input
+              className="dup-input"
+              type="number"
+              value={duplicateShiftDays}
+              onChange={(e) =>
+                setDuplicateShiftDays(parseInt(e.target.value || "0", 10))
+              }
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button
+            className="btn btn-primary"
+            disabled={!source || parsedNewUnits.length === 0}
+            onClick={async () => {
+              if (!source) return alert("Please click a unit card first.");
+              try {
+                await onConfirm(source, parsedNewUnits, duplicateShiftDays);
+                alert(`Schedule duplicated to: ${parsedNewUnits.join(", ")}`);
+                onClose();
+              } catch (err: any) {
+                alert(err.message || String(err));
+              }
+            }}
+          >
+            Confirm
+          </button>
+
+          <button className="btn btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   Main Page
+   ========================================================= */
 export default function SchedulerPage() {
   const { data: assignments, isLoading, error } = useAssignmentsSchedule();
   const { data: steps } = useSteps();
@@ -52,9 +156,9 @@ export default function SchedulerPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // NEW: Duplicate schedule modal state
+  // ✅ Duplicate schedule modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateUnitIdsText, setDuplicateUnitIdsText] = useState(""); // <-- multiple IDs
+  const [duplicateUnitIdsText, setDuplicateUnitIdsText] = useState("");
   const [duplicateShiftDays, setDuplicateShiftDays] = useState(1);
 
   // NEW: which unit card is expanded (null = all collapsed)
@@ -177,29 +281,34 @@ export default function SchedulerPage() {
     }));
   }
 
-async function duplicateSchedule(
-  sourceUnit: string,
-  newUnits: string[],
-  shift: number
-) {
-  const res = await fetch("http://localhost:8000/schedule/duplicate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: JSON.stringify({
-      source_unit_id: sourceUnit,
-      new_unit_ids: newUnits,   // <-- send full array
-      day_shift: shift,
-    }),
-  });
+  /* =========================================================
+     ✅ Duplicate schedule API call (supports multiple IDs)
+     ========================================================= */
+  async function duplicateSchedule(
+    sourceUnit: string,
+    newUnits: string[],
+    shift: number
+  ) {
+    const res = await fetch("http://localhost:8000/schedule/duplicate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        source_unit_id: sourceUnit,
+        new_unit_ids: newUnits,
+        day_shift: shift,
+      }),
+    });
 
-  if (!res.ok) throw new Error(await res.text());
-  return await res.json();
-}
+    if (!res.ok) throw new Error(await res.text());
+    await res.json();
+  }
 
-
+  /* =========================================================
+     Save all (unchanged)
+     ========================================================= */
   async function handleSaveAll() {
     if (!assignments) return;
 
@@ -247,6 +356,7 @@ async function duplicateSchedule(
     }
   }
 
+  // --- unchanged guards ---
   if (isLoading) return <div>Loading schedule…</div>;
   if (error)
     return (
@@ -257,75 +367,9 @@ async function duplicateSchedule(
   if (!assignments || assignments.length === 0)
     return <div>No assignments yet.</div>;
 
-
-function DuplicateModal() {
-  const source = openUnitId;
-
-  // parse text -> array of unit ids
-  const parsedNewUnits = duplicateUnitIdsText
-    .split(/[\s,]+/)          // split by comma OR any whitespace/newline
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <h2>Duplicate Schedule</h2>
-
-        <label>Source Unit:</label>
-        <input value={source || ""} disabled />
-
-        <label>New Unit IDs (comma / space / newline separated):</label>
-        <textarea
-          rows={1}
-          value={duplicateUnitIdsText}
-          onChange={(e) => setDuplicateUnitIdsText(e.target.value)}
-        />
-
-        <label>Shift by Days:</label>
-        <input
-          type="number"
-          value={duplicateShiftDays}
-          onChange={(e) => setDuplicateShiftDays(parseInt(e.target.value || "0", 10))}
-        />
-
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button
-            className="btn btn-primary"
-            disabled={!source || parsedNewUnits.length === 0}
-            onClick={async () => {
-              try {
-                if (!source) throw new Error("Please click a unit card first.");
-                if (parsedNewUnits.length === 0)
-                  throw new Error("Please enter at least one new unit id.");
-
-                await duplicateSchedule(source, parsedNewUnits, duplicateShiftDays);
-
-                alert(`Schedule duplicated to: ${parsedNewUnits.join(", ")}`);
-                setShowDuplicateModal(false);
-                setDuplicateUnitIdsText("");
-                setDuplicateShiftDays(1);
-              } catch (err: any) {
-                alert(err.message || String(err));
-              }
-            }}
-          >
-            Confirm
-          </button>
-
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowDuplicateModal(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
+  /* =========================================================
+     Render
+     ========================================================= */
   return (
     <div className="page">
       <header className="page-header">
@@ -337,6 +381,7 @@ function DuplicateModal() {
             steps (Burn-in Test blocks 8 days).
           </p>
         </div>
+
         <button
           className="btn btn-primary btn-pill"
           onClick={handleSaveAll}
@@ -344,23 +389,40 @@ function DuplicateModal() {
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
-          <button
-            className="btn btn-secondary btn-pill"
-            style={{ marginLeft: 12 }}
-            onClick={() => {
-              if (!openUnitId) {
-                alert("Please click and expand a unit first, then duplicate from it.");
-                return;
-              }
-              setShowDuplicateModal(true);
-            }}
-          >
-            Duplicate Schedule
-          </button>
 
-
+        <button
+          className="btn btn-secondary btn-pill"
+          style={{ marginLeft: 12 }}
+          onClick={() => {
+            if (!openUnitId) {
+              alert("Please click and expand a unit first, then duplicate from it.");
+              return;
+            }
+            setShowDuplicateModal(true);
+          }}
+        >
+          Duplicate Schedule
+        </button>
       </header>
-      {showDuplicateModal && <DuplicateModal />}    
+
+      {/* ✅ modal render with props */}
+      {showDuplicateModal && (
+        <DuplicateModal
+          source={openUnitId}
+          duplicateUnitIdsText={duplicateUnitIdsText}
+          setDuplicateUnitIdsText={setDuplicateUnitIdsText}
+          duplicateShiftDays={duplicateShiftDays}
+          setDuplicateShiftDays={setDuplicateShiftDays}
+          onClose={() => {
+            setShowDuplicateModal(false);
+            setDuplicateUnitIdsText("");
+            setDuplicateShiftDays(1);
+          }}
+          onConfirm={duplicateSchedule}
+        />
+      )}
+
+      {/* --- unchanged banners --- */}
       {errorMsg && (
         <div className="banner banner--error" style={{ marginBottom: 8 }}>
           {errorMsg}
@@ -372,6 +434,7 @@ function DuplicateModal() {
         </div>
       )}
 
+      {/* --- unchanged unit cards/table --- */}
       {units.map(({ unit_id, rows }) => {
         const isOpen = openUnitId === unit_id;
 
@@ -384,9 +447,7 @@ function DuplicateModal() {
               }
             >
               <div className="scheduler-unit-header-main">
-                <div className="scheduler-unit-title">
-                  Unit {unit_id}
-                </div>
+                <div className="scheduler-unit-title">Unit {unit_id}</div>
                 <div className="scheduler-unit-subtitle">
                   {rows.length} steps to schedule
                 </div>
