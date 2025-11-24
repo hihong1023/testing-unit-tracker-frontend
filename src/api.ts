@@ -1,6 +1,7 @@
 // src/api.ts
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
+
 
 // ---------- Types & runtime exports ----------
 
@@ -318,3 +319,4 @@ export async function duplicateSchedule(payload: DuplicateRequest): Promise<{ ok
   }
   return res.json();
 }
+
