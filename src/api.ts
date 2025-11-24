@@ -1,7 +1,6 @@
 // src/api.ts
 
-const API_BASE = "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
-
+export const API_BASE = "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 // ---------- Types & runtime exports ----------
 
@@ -142,19 +141,19 @@ async function request(path: string, options: RequestInit = {}) {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
-  if (token) {
-    (headers as any)["Authorization"] = `Bearer ${token}`;
-  }
+
+  if (token) (headers as any).Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
   });
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || res.statusText);
   }
-  // Some endpoints (like POST /.../read) may return empty body
+
   const text = await res.text();
   try {
     return text ? JSON.parse(text) : null;
@@ -162,6 +161,7 @@ async function request(path: string, options: RequestInit = {}) {
     return text as any;
   }
 }
+
 
 // ---------- Auth ----------
 
@@ -303,20 +303,14 @@ export interface DuplicateRequest {
   day_shift?: number;
 }
 
-export async function duplicateSchedule(payload: DuplicateRequest): Promise<{ ok: boolean; created_units: string[] }> {
-  const res = await fetch(`${API_BASE_URL}/schedule/duplicate`, {
+export async function duplicateSchedule(
+  payload: DuplicateRequest
+): Promise<{ ok: boolean; created_units: string[] }> {
+  return request("/schedule/duplicate", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: getAuthHeader(), // same as other calls
-    },
     body: JSON.stringify(payload),
   });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Duplicate failed (${res.status})`);
-  }
-  return res.json();
 }
+
+
 
