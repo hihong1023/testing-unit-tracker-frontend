@@ -289,7 +289,7 @@ export default function SchedulerPage() {
     newUnits: string[],
     shift: number
   ) {
-    const res = await fetch("http://localhost:8000/schedule/duplicate", {
+    const res = await fetch(`${API_BASE}/schedule/duplicate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -568,3 +568,4 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
