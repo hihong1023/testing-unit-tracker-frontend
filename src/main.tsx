@@ -4,14 +4,21 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
+import { PromptProvider } from "./components/PromptProvider";
+
 
 const client = new QueryClient();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found");
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <QueryClientProvider client={client}>
       <BrowserRouter>
-        <App />
+        <PromptProvider>
+          <App />
+        </PromptProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>
