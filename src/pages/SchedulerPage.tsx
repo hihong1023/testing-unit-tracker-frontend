@@ -7,6 +7,8 @@ import {
   useUpdateAssignment,
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
+import { usePrompt } from "../components/PromptProvider";
+
 export const API_BASE =
   "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
@@ -74,6 +76,7 @@ function DuplicateModal({
   onClose,
   onConfirm,
 }: DuplicateModalProps) {
+  const prompt = usePrompt();
   const parsedNewUnits = duplicateUnitIdsText
     .split(/[\s,]+/)
     .map((s) => s.trim())
@@ -122,13 +125,28 @@ function DuplicateModal({
             className="btn btn-primary"
             disabled={!source || parsedNewUnits.length === 0}
             onClick={async () => {
-              if (!source) return alert("Please click a unit card first.");
+              if (!source) {
+                await prompt.alert(
+                  "Please click a unit card first.",
+                  "Duplicate Schedule"
+                );
+                return;
+              }
+
               try {
                 await onConfirm(source, parsedNewUnits, duplicateShiftDays);
-                alert(`Schedule duplicated to: ${parsedNewUnits.join(", ")}`);
+
+                await prompt.alert(
+                  `Schedule duplicated to: ${parsedNewUnits.join(", ")}`,
+                  "Success"
+                );
+
                 onClose();
               } catch (err: any) {
-                alert(err.message || String(err));
+                await prompt.alert(
+                  err.message || String(err),
+                  "Duplicate Failed"
+                );
               }
             }}
           >
@@ -397,7 +415,10 @@ export default function SchedulerPage() {
           style={{ marginLeft: 12 }}
           onClick={() => {
             if (!openUnitId) {
-              alert("Please click and expand a unit first, then duplicate from it.");
+              prompt.alert(
+                "Please click and expand a unit first, then duplicate from it.",
+                "Duplicate Schedule"
+              );
               return;
             }
             setShowDuplicateModal(true);
@@ -570,5 +591,6 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
