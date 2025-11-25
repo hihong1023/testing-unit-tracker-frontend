@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRole, getUser, createResult } from "../api";
 import { useTesterAssignments, useUnits, useSteps } from "../hooks";
 import type { Assignment, TestStep, UnitSummary } from "../api";
+import { usePrompt } from "../components/PromptProvider";
 
 /* ----------------- Helpers ----------------- */
 
@@ -50,6 +51,7 @@ interface UnitCard {
 }
 
 function TesterQueueTesterView() {
+  const prompt = usePrompt();
   const user = getUser();
   const testerId = user?.name ?? "";
 
@@ -139,18 +141,18 @@ function TesterQueueTesterView() {
     return cards;
   }, [assignments, stepById, todayKey]);
 
-  const handleQuickResult = (card: UnitCard, passed: boolean) => {
+  const handleQuickResult = async (card: UnitCard, passed: boolean) => {
     if (resultMutation.isLoading) return;
 
-    if (
-      !window.confirm(
-        `Mark ${card.unit_id} – ${
-          card.step?.name ?? `Step ${card.assignment.step_id}`
-        } as ${passed ? "PASS" : "FAIL"}?`
-      )
-    ) {
-      return;
-    }
+    const ok = await prompt.confirm(
+      `Mark ${card.unit_id} – ${
+        card.step?.name ?? `Step ${card.assignment.step_id}`
+      } as ${passed ? "PASS" : "FAIL"}?`,
+      "Submit Result",
+      { confirmText: passed ? "PASS" : "FAIL", cancelText: "Cancel" }
+    );
+
+    if (!ok) return;
 
     resultMutation.mutate({
       unit_id: card.unit_id,
@@ -429,3 +431,4 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
