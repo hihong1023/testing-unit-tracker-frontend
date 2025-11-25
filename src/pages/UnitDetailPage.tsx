@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
+export const API_BASE =
+  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
-// Formatter: backend stores UTC; show as Singapore time (UTC+8), up to minutes
+
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
 
@@ -317,5 +319,6 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
