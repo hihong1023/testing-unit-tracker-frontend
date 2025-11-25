@@ -3,11 +3,13 @@ import { useState, FormEvent, useMemo } from "react";
 import { useUnits, useCreateUnit, useDeleteUnit } from "../hooks";
 import UnitCard from "../components/UnitCard";
 import { getRole } from "../api";
+import { usePrompt } from "../components/PromptProvider";
 
 type StatusFilter = "all" | "active" | "completed";
 type SortBy = "unit" | "progress";
 
 export default function UnitsPage() {
+  const prompt = usePrompt();
   const role = getRole();
   const isSupervisor = role === "supervisor";
 
@@ -26,10 +28,14 @@ export default function UnitsPage() {
     setNewUnitId("");
   }
 
-  function handleDelete(unitId: string) {
-    if (!window.confirm(`Delete unit ${unitId}? This cannot be undone.`)) {
-      return;
-    }
+  async function handleDelete(unitId: string) {
+    const ok = await prompt.confirm(
+      `Delete unit ${unitId}? This cannot be undone.`,
+      "Delete Unit",
+      { confirmText: "Delete", cancelText: "Cancel" }
+    );
+    if (!ok) return;
+
     deleteUnit.mutate(unitId);
   }
 
@@ -198,3 +204,4 @@ export default function UnitsPage() {
     </div>
   );
 }
+
