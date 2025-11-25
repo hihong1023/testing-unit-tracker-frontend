@@ -31,8 +31,11 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
 
   const close = useCallback((value: boolean) => {
     setState((prev) => {
-      prev.resolve?.(value);
-      return { ...prev, open: false, resolve: undefined };
+      const resolver = prev.resolve;
+      // close first
+      const next = { ...prev, open: false, resolve: undefined };
+      resolver?.(value);
+      return next;
     });
   }, []);
 
@@ -114,3 +117,4 @@ export function usePrompt() {
   if (!ctx) throw new Error("usePrompt must be used inside PromptProvider");
   return ctx;
 }
+
