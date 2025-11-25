@@ -170,6 +170,7 @@ export default function SchedulerPage() {
   const { data: steps } = useSteps();
   const { data: testers } = useTesters();
   const updateAssignment = useUpdateAssignment();
+  const prompt = usePrompt();
 
   const [editState, setEditState] = useState<Record<string, RowState>>({});
   const [saving, setSaving] = useState(false);
@@ -591,6 +592,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
