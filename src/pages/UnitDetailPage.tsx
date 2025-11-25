@@ -2,6 +2,7 @@
 import { useParams } from "react-router-dom";
 import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
+import { usePrompt } from "../components/PromptProvider";
 
 // Formatter: backend stores UTC; show as Singapore time (UTC+8), up to minutes
 function formatSingaporeDateTime(iso?: string | null): string {
@@ -23,6 +24,7 @@ function formatSingaporeDateTime(iso?: string | null): string {
 }
 
 export default function UnitDetailPage() {
+  const prompt = usePrompt();
   const { unitId } = useParams();
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
@@ -88,7 +90,7 @@ export default function UnitDetailPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(`Download failed: ${err.message || err}`);
+      prompt.alert(`Download failed: ${err.message || err}`, "Download Error");
     }
   }
 
@@ -114,12 +116,20 @@ export default function UnitDetailPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(`Download step logs failed: ${err.message || err}`);
+      prompt.alert(
+        `Download step logs failed: ${err.message || err}`,
+        "Download Error"
+      );
     }
   }
 
   async function handleRemoveStepLogs(stepId: number) {
-    if (!window.confirm("Remove all log files for this step?")) return;
+    const ok = await prompt.confirm(
+      "Remove all log files for this step?",
+      "Remove Evidence",
+      { confirmText: "Remove", cancelText: "Cancel" }
+    );
+    if (!ok) return;
 
     try {
       const token = getToken();
@@ -137,7 +147,7 @@ export default function UnitDetailPage() {
       // Simple way: refresh the page so counts update
       window.location.reload();
     } catch (err: any) {
-      alert(`Failed to remove logs: ${err.message || err}`);
+      prompt.alert(`Failed to remove logs: ${err.message || err}`, "Remove Error");
     }
   }
 
@@ -307,3 +317,4 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
