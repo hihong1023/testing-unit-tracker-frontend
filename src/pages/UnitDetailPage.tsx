@@ -72,7 +72,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `http://localhost:8000/reports/unit/${data.unit.id}/zip`,
+        `${API_BASE}/reports/unit/${data.unit.id}/zip`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
@@ -98,7 +98,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `http://localhost:8000/reports/unit/${data.unit.id}/step/${stepId}/zip`,
+        `${API_BASE}/reports/unit/${data.unit.id}/step/${stepId}/zip`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
@@ -134,7 +134,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `http://localhost:8000/reports/unit/${data.unit.id}/step/${stepId}/evidence`,
+        `${API_BASE}/reports/unit/${data.unit.id}/step/${stepId}/evidence`,
         {
           method: "DELETE",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -317,4 +317,5 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
