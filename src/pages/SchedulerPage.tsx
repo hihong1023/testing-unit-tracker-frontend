@@ -91,7 +91,7 @@ function DuplicateModal({
 
           <div className="dup-field">
             <label className="dup-label">
-              New Unit IDs (multiple units use comma to separate):
+              New Unit IDs (comma / space / newline separated):
             </label>
             <textarea
               className="dup-input dup-textarea"
