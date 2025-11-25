@@ -7,6 +7,8 @@ import {
   useUpdateAssignment,
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
+export const API_BASE =
+  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 /* =========================================================
    Types
@@ -568,4 +570,5 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
