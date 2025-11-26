@@ -1,7 +1,7 @@
 // src/pages/TesterUpcomingPage.tsx
 import React, { useMemo, useState } from "react";
 import { getUser } from "../api";
-import { useTesterAssignments, useSteps } from "../hooks";
+import { useTesterSchedule, useSteps } from "../hooks";  // 🔁 changed hook import
 import type { Assignment } from "../api";
 
 export default function TesterUpcomingPage() {
@@ -9,10 +9,10 @@ export default function TesterUpcomingPage() {
   const testerId = user?.name ?? "";
 
   const {
-    data: assignments,
+    data: assignments,   // 🔁 this is now full SCHEDULE
     isLoading,
     error,
-  } = useTesterAssignments(testerId);
+  } = useTesterSchedule(testerId);   // 🔁 use schedule, not filtered assignments
 
   const { data: steps } = useSteps();
 
@@ -29,26 +29,13 @@ export default function TesterUpcomingPage() {
     assignments: Assignment[];
     unitCount: number;
   }[] = useMemo(() => {
-    if (!assignments) return [];
-
-    // ONLY future, active, non-skipped tests
-    const base: Assignment[] = assignments.filter(
-      (a) =>
-        !a.skipped && // ignore skipped tests
-        (a.status === "PENDING" || a.status === "RUNNING")
-    );
-
+    const base: Assignment[] = assignments ?? [];
     const map: Record<string, Assignment[]> = {};
 
     base.forEach((a) => {
-      // Prefer start_at; fall back to end_at if start_at is missing
-      const dk =
-        toDateKey(a.start_at) ??
-        toDateKey(a.end_at);
-
-      if (!dk) return;          // no dates at all → ignore
-      if (dk <= todayKey) return; // only future dates (tomorrow and beyond)
-
+      const dk = toDateKey(a.start_at);
+      if (!dk) return;
+      if (dk <= todayKey) return; // only FUTURE dates; today & past belong to "Today's Queue"
       if (!map[dk]) map[dk] = [];
       map[dk].push(a);
     });
@@ -85,9 +72,9 @@ export default function TesterUpcomingPage() {
         <div className="page-header__title-group">
           <h1>Upcoming Tests (Tester)</h1>
           <p>
-            Logged in as <strong>{testerId}</strong>. Only tests{" "}
-            <strong>assigned to you</strong> and scheduled after today are
-            listed here.
+            Logged in as <strong>{testerId}</strong>. Shows all tests{" "}
+            <strong>assigned to you</strong> and scheduled for a{" "}
+            <strong>future date</strong>.
           </p>
         </div>
 
@@ -111,8 +98,8 @@ export default function TesterUpcomingPage() {
           <div>
             <div className="card__title">Future schedule</div>
             <div className="card__subtitle">
-              Dates are grouped by planned start date. Click a row to see unit
-              and step details.
+              Dates are grouped by planned <strong>start date</strong>. Click a
+              row to see unit and step details.
             </div>
           </div>
         </div>
@@ -121,14 +108,14 @@ export default function TesterUpcomingPage() {
 
         {error && (
           <p className="text-error">
-            Error loading assignments: {(error as any).message}
+            Error loading schedule: {(error as any).message}
           </p>
         )}
 
         {!isLoading && !error && upcomingGroups.length === 0 && (
           <p className="text-muted">
-            No upcoming scheduled tests. Everything assigned to you is either
-            for today or earlier.
+            No upcoming scheduled tests. Everything assigned to you is for today
+            or earlier.
           </p>
         )}
 
@@ -164,7 +151,7 @@ export default function TesterUpcomingPage() {
                     </div>
                   </div>
 
-                  {/* Details table under this date */}
+                  {/* Details table */}
                   {open && (
                     <div className="queue-table-wrapper queue-table-wrapper--nested">
                       <div className="queue-detail-title">
