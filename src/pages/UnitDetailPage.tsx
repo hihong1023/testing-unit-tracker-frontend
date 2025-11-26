@@ -471,20 +471,13 @@ export default function UnitDetailPage() {
 
       {/* Rename modal */}
       {isRenameOpen && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h2>Rename unit</h2>
-            <p className="text-muted">
-              Change the Unit ID. All assignments, results, and evidence will
-              move to the new ID.
-            </p>
-            <div style={{ marginTop: 8 }}>
-              <label
-                className="form-label"
-                style={{ display: "block", fontSize: 12, marginBottom: 4 }}
-              >
-                New Unit ID
-              </label>
+        <div className="prompt-backdrop">
+          <div className="prompt-modal">
+            <div className="prompt-title">Rename unit</div>
+            <div className="prompt-message">
+              <p style={{ marginBottom: 8 }}>
+                Change the Unit ID. All assignments, results, and evidence will move to the new ID.
+              </p>
               <input
                 type="text"
                 value={renameValue}
@@ -493,14 +486,8 @@ export default function UnitDetailPage() {
                 style={{ width: "100%" }}
               />
             </div>
-            <div
-              style={{
-                marginTop: 12,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 8,
-              }}
-            >
+      
+            <div className="prompt-actions">
               <button
                 className="btn btn-secondary"
                 type="button"
@@ -519,6 +506,8 @@ export default function UnitDetailPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
+
