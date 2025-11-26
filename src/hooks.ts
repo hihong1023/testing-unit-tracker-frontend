@@ -1,5 +1,7 @@
 // src/hooks.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { API_BASE, getToken } from "./api";
+import type { Assignment } from "./api";
 
 import {
   fetchUnitSummaries,
@@ -166,3 +168,23 @@ export function useTesterNotifications(testerId: string | null) {
   });
 }
 
+export function useTesterSchedule(testerId: string) {
+  return useQuery<Assignment[], Error>({
+    queryKey: ["testerSchedule", testerId],
+    enabled: !!testerId,
+    queryFn: async () => {
+      if (!testerId) return [];
+      const token = getToken();
+      const res = await fetch(
+        `${API_BASE}/tester/schedule?tester_id=${encodeURIComponent(testerId)}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
+      );
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      return res.json();
+    },
+  });
+}
