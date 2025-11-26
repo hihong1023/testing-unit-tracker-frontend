@@ -1,6 +1,6 @@
 // src/pages/UnitsPage.tsx
 import { useState, FormEvent, useMemo } from "react";
-import { useUnits, useCreateUnit, useDeleteUnit } from "../hooks";
+import { useUnits, useCreateUnit, useDeleteUnit, useRenameUnit } from "../hooks";
 import UnitCard from "../components/UnitCard";
 import { getRole } from "../api";
 import { usePrompt } from "../components/PromptProvider";
@@ -17,6 +17,7 @@ export default function UnitsPage() {
   const [newUnitId, setNewUnitId] = useState("");
   const createUnit = useCreateUnit();
   const deleteUnit = useDeleteUnit();
+  const renameUnit = useRenameUnit();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("unit");
@@ -37,6 +38,25 @@ export default function UnitsPage() {
     if (!ok) return;
 
     deleteUnit.mutate(unitId);
+  }
+
+  async function handleRename(unitId: string) {
+    // Simple prompt for now – you can swap to a nicer modal later
+    const newId = window.prompt("Enter new Unit ID", unitId);
+    if (!newId) return;
+
+    const trimmed = newId.trim();
+    if (!trimmed || trimmed === unitId) return;
+
+    try {
+      await renameUnit.mutateAsync({ oldId: unitId, newId: trimmed });
+    } catch (err: any) {
+      alert(
+        err?.response?.data?.detail ??
+          err?.message ??
+          "Failed to rename unit. The new ID may already exist or be invalid."
+      );
+    }
   }
 
   const stats = useMemo(() => {
@@ -196,7 +216,20 @@ export default function UnitsPage() {
                   ×
                 </button>
               )}
+
               <UnitCard unit={u} />
+
+              {/* Simple rename button under card (supervisor only) */}
+              {isSupervisor && (
+                <button
+                  type="button"
+                  onClick={() => handleRename(u.unit_id)}
+                  className="btn btn-secondary"
+                  style={{ marginTop: 8, width: "100%" }}
+                >
+                  Rename unit
+                </button>
+              )}
             </div>
           ))}
         </section>
@@ -204,4 +237,3 @@ export default function UnitsPage() {
     </div>
   );
 }
-
