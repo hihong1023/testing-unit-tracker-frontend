@@ -36,16 +36,9 @@ function cellBorderColor(status: string, passed?: boolean): string {
   return "#d1d5db";
 }
 
-
-
-
 /* ---------- reusable table renderer ---------- */
 
-function isOverdue(date?: string | null): boolean {
-  if (!date || date === "-") return false;
-  const today = new Date().toISOString().slice(0, 10);
-  return date < today;
-}
+type CellStatusKind = "PENDING" | "RUNNING" | "RESULT" | "OVERDUE";
 
 function MatrixTable({
   rows,
@@ -60,7 +53,7 @@ function MatrixTable({
         tester: string | null;
         date: string | null;
         statusLabel: string;
-        statusKind: "PENDING" | "RUNNING" | "RESULT" | "OVERDUE";
+        statusKind: CellStatusKind;
         passed?: boolean;
       }
     >;
@@ -133,10 +126,9 @@ function MatrixTable({
             </td>
             {steps.map((step) => {
               const cell = row.cells[step.id];
-              const overdue = cell.statusLabel === "OVERDUE";
 
-              const bg = cellBackground(cell.statusKind, cell.passed, overdue);
-              const border = cellBorderColor(cell.statusKind, cell.passed, overdue);
+              const bg = cellBackground(cell.statusKind, cell.passed);
+              const border = cellBorderColor(cell.statusKind, cell.passed);
 
               return (
                 <td
@@ -190,6 +182,8 @@ function MatrixTable({
                             ? "#b91c1c"
                             : cell.statusKind === "RUNNING"
                             ? "#854d0e"
+                            : cell.statusKind === "OVERDUE"
+                            ? "#92400e"
                             : "#4b5563",
                       }}
                     >
@@ -216,11 +210,23 @@ export default function MatrixViewPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [page, setPage] = useState(0);
 
+  // New: hide completed toggle
+  const [hideCompleted, setHideCompleted] = useState(true);
+
   // fetch all unit details in one go for the matrix
   const unitIds = useMemo(
     () => (units ?? []).map((u) => u.unit_id),
     [units]
   );
+
+  // unit_id -> status lookup (for filtering)
+  const unitStatusMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    (units ?? []).forEach((u) => {
+      m[u.unit_id] = u.status;
+    });
+    return m;
+  }, [units]);
 
   const {
     data: detailsList,
@@ -263,7 +269,7 @@ export default function MatrixViewPage() {
           tester: string | null;
           date: string | null;
           statusLabel: string;
-          statusKind: "PENDING" | "RUNNING" | "RESULT";
+          statusKind: CellStatusKind;
           passed?: boolean;
         }
       > = {};
@@ -289,7 +295,7 @@ export default function MatrixViewPage() {
           }
 
           let statusLabel = "PENDING";
-          let statusKind: "PENDING" | "RUNNING" | "RESULT" = "PENDING";
+          let statusKind: CellStatusKind = "PENDING";
           let passed: boolean | undefined;
 
           if (r) {
@@ -310,7 +316,6 @@ export default function MatrixViewPage() {
               } else if (a.start_at instanceof Date) {
                 startStr = a.start_at.toISOString().slice(0, 10);
               } else if (a.start_at) {
-                // fallback for unknown Date-like objects
                 try {
                   // @ts-ignore
                   startStr = new Date(a.start_at).toISOString().slice(0, 10);
@@ -322,7 +327,7 @@ export default function MatrixViewPage() {
               if (startStr) {
                 if (startStr < todayKey) {
                   // overdue
-                  statusKind = "OVERDUE"; // use amber styling
+                  statusKind = "OVERDUE";
                   statusLabel = "OVERDUE";
                 } else if (startStr === todayKey) {
                   // due today
@@ -361,18 +366,31 @@ export default function MatrixViewPage() {
 
   const anyLoading = unitsLoading || stepsLoading || detailsLoading;
 
+  // ===== NEW: filter out completed units when toggle is ON =====
+  const filteredRows = useMemo(() => {
+    if (rows.length === 0) return [];
+    return rows.filter((row) => {
+      const status = unitStatusMap[row.unitId]; // "COMPLETED" / "IN_PROGRESS" / etc.
+      if (!status) return true;
+      if (hideCompleted && status === "COMPLETED") return false;
+      return true;
+    });
+  }, [rows, unitStatusMap, hideCompleted]);
+
   /* ----- paging for fullscreen mode ----- */
 
   const rowsPerPage = 10; // you can tweak this
   const totalPages =
-    rows.length === 0 ? 1 : Math.max(1, Math.ceil(rows.length / rowsPerPage));
+    filteredRows.length === 0
+      ? 1
+      : Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
 
   const visibleRows = useMemo(() => {
-    if (!isFullscreen) return rows;
-    if (rows.length === 0) return rows;
+    if (!isFullscreen) return filteredRows;
+    if (filteredRows.length === 0) return filteredRows;
     const start = page * rowsPerPage;
-    return rows.slice(start, start + rowsPerPage);
-  }, [rows, isFullscreen, page]);
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, isFullscreen, page]);
 
   // auto-advance pages when fullscreen
   useEffect(() => {
@@ -386,9 +404,11 @@ export default function MatrixViewPage() {
   // reset to first page when enter fullscreen or rows change
   useEffect(() => {
     if (isFullscreen) setPage(0);
-  }, [isFullscreen, rows.length]);
+  }, [isFullscreen, filteredRows.length]);
 
   /* ---------- render ---------- */
+
+  const hasAnyRows = filteredRows.length > 0;
 
   return (
     <div className="page">
@@ -403,12 +423,21 @@ export default function MatrixViewPage() {
         </div>
 
         {rows.length > 0 && (
-          <button
-            className="btn btn-secondary"
-            onClick={() => setIsFullscreen(true)}
-          >
-            Full screen
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setHideCompleted((v) => !v)}
+            >
+              {hideCompleted ? "Show completed units" : "Hide completed units"}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsFullscreen(true)}
+            >
+              Full screen
+            </button>
+          </div>
         )}
       </header>
 
@@ -429,13 +458,15 @@ export default function MatrixViewPage() {
         </div>
       )}
 
-      {!anyLoading && rows.length === 0 && (
+      {!anyLoading && !hasAnyRows && (
         <p className="text-muted" style={{ marginTop: 8 }}>
-          No units to show yet.
+          {hideCompleted
+            ? "No active units to show (all completed or filtered)."
+            : "No units to show yet."}
         </p>
       )}
 
-      {rows.length > 0 && stepsOrdered.length > 0 && (
+      {hasAnyRows && stepsOrdered.length > 0 && (
         <section
           className="card"
           style={{
@@ -451,20 +482,24 @@ export default function MatrixViewPage() {
               overflowX: "auto",
             }}
           >
-            {/* normal view: show all rows, horizontal scroll allowed */}
-            <MatrixTable rows={rows} steps={stepsOrdered} compact={false} />
+            {/* normal view: use filteredRows (respect hide-completed toggle) */}
+            <MatrixTable
+              rows={filteredRows}
+              steps={stepsOrdered}
+              compact={false}
+            />
           </div>
         </section>
       )}
 
       {/* ---------- fullscreen overlay ---------- */}
-      {isFullscreen && rows.length > 0 && stepsOrdered.length > 0 && (
+      {isFullscreen && hasAnyRows && stepsOrdered.length > 0 && (
         <div
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 999,
-            background: isFullscreen ? "#00008B" : "transparent",
+            background: "#00008B",
             display: "flex",
             flexDirection: "column",
             padding: "16px 20px",
@@ -482,8 +517,8 @@ export default function MatrixViewPage() {
             <div>
               <div style={{ fontSize: 18, fontWeight: 700 }}>Matrix View</div>
               <div style={{ fontSize: 12, opacity: 0.85 }}>
-                Full-screen mode. pages auto-change
-                every 15s if there are many units.
+                Full-screen mode. Pages auto-change every 15s if there are many
+                units.
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
