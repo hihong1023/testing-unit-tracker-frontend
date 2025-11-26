@@ -1,5 +1,10 @@
 // src/components/PromptProvider.tsx
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 
 type PromptKind = "alert" | "confirm";
 
@@ -47,6 +52,7 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
         title,
         message,
         confirmText: "OK",
+        cancelText: undefined,
         resolve: () => resolve(),
       });
     });
