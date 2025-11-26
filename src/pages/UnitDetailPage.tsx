@@ -61,9 +61,16 @@ export default function UnitDetailPage() {
   const resultsByStep = new Map<number, (typeof data.results)[number]>();
   data.results.forEach((r) => resultsByStep.set(r.step_id, r));
 
-  // Derive progress from results
-  const totalSteps = steps.length;
-  const passedSteps = data.results.filter((r) => r.passed).length;
+  // Progress: only count non-skipped steps
+  const nonSkippedAssignments = data.assignments.filter(
+    (a: any) => !a.skipped // if skipped is undefined, this is still treated as "not skipped"
+  );
+  const nonSkippedStepIds = new Set(nonSkippedAssignments.map((a) => a.step_id));
+
+  const passedSteps = data.results.filter(
+    (r) => r.passed && nonSkippedStepIds.has(r.step_id)
+  ).length;
+  const totalSteps = nonSkippedStepIds.size || steps.length; // fallback to all steps if skipped isn't wired yet
   const progress = totalSteps ? (passedSteps / totalSteps) * 100 : 0;
 
   const unitLabel = (data.unit as any).unit_id || data.unit.id;
@@ -159,13 +166,9 @@ export default function UnitDetailPage() {
   }
 
   async function handleRenameUnit() {
-    // Basic text prompt – you can replace with a fancier modal later
-    const newId = window.prompt(
-      "Enter new unit ID:",
-      unitLabel
-    );
-
+    const newId = window.prompt("Enter new unit ID:", unitLabel);
     if (!newId) return;
+
     const trimmed = newId.trim();
     if (!trimmed || trimmed === unitLabel) return;
 
@@ -204,9 +207,52 @@ export default function UnitDetailPage() {
         replace: true,
       });
     } catch (err: any) {
+      prompt.alert(`Rename failed: ${err.message || err}`, "Rename Error");
+    }
+  }
+
+  async function handleToggleSkip(
+    assignmentId: string | undefined,
+    currentSkipped: boolean | undefined
+  ) {
+    if (!assignmentId) return;
+
+    const makeSkipped = !currentSkipped;
+
+    // Tiny confirm message (only when skipping)
+    if (makeSkipped) {
+      const ok = await prompt.confirm(
+        "Mark this step as 'Not tested' (N/A) for this unit?\nIt will be removed from progress and queues.",
+        "Mark Not Tested",
+        { confirmText: "Mark not tested", cancelText: "Cancel" }
+      );
+      if (!ok) return;
+    }
+
+    try {
+      const token = getToken();
+      const res = await fetch(
+        `${API_BASE}/assignments/${encodeURIComponent(assignmentId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ skipped: makeSkipped }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      // easiest: reload page so status / progress update
+      window.location.reload();
+    } catch (err: any) {
       prompt.alert(
-        `Rename failed: ${err.message || err}`,
-        "Rename Error"
+        `Failed to update step: ${err.message || err}`,
+        "Update Error"
       );
     }
   }
@@ -316,8 +362,10 @@ export default function UnitDetailPage() {
                 .slice()
                 .sort((a, b) => a.order - b.order)
                 .map((s) => {
-                  const a = assignmentsByStep.get(s.id);
+                  const a = assignmentsByStep.get(s.id) as any;
                   const r = resultsByStep.get(s.id);
+
+                  const skipped = !!a?.skipped;
 
                   let resultLabel = "—";
                   let resultClass = "result-pill result-pill--none";
@@ -338,7 +386,26 @@ export default function UnitDetailPage() {
                       <td>{s.order}</td>
                       <td>{s.name}</td>
                       <td>{a?.tester_id || "-"}</td>
-                      <td>{a?.status || "-"}</td>
+                      <td>
+                        <div>
+                          {skipped
+                            ? "SKIPPED (N/A)"
+                            : a?.status || "-"}
+                        </div>
+                        {/* Allow marking/unmarking as not tested only if no result yet */}
+                        {!r && a && (
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-xs"
+                            style={{ marginTop: 4 }}
+                            onClick={() =>
+                              handleToggleSkip(a.id, a.skipped)
+                            }
+                          >
+                            {skipped ? "Re-enable step" : "Mark not tested"}
+                          </button>
+                        )}
+                      </td>
                       <td>
                         <span className={resultClass}>{resultLabel}</span>
                       </td>
