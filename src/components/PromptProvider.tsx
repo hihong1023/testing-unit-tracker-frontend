@@ -11,9 +11,9 @@ export const API_BASE =
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
 
-  // Backend uses datetime.utcnow() → treat as UTC (you can add +8h if you want SGT)
+  // Backend uses datetime.utcnow() → treat as UTC & convert to SGT (+8)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  const plus8 = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
+  const plus8 = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
 
   const y = plus8.getFullYear();
   const m = String(plus8.getMonth() + 1).padStart(2, "0");
@@ -30,7 +30,7 @@ export default function UnitDetailPage() {
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
 
-  // ==== NEW: local state for rename modal ====
+  // Rename modal state
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
@@ -66,16 +66,17 @@ export default function UnitDetailPage() {
   const resultsByStep = new Map<number, (typeof data.results)[number]>();
   data.results.forEach((r) => resultsByStep.set(r.step_id, r));
 
-  // Progress: only count non-skipped steps
-  const nonSkippedAssignments = data.assignments.filter(
-    (a: any) => !a.skipped // if skipped is undefined, this is still treated as "not skipped"
-  );
+  // ---- Progress: only count non-skipped steps ----
+  const nonSkippedAssignments = data.assignments.filter((a: any) => !a.skipped);
   const nonSkippedStepIds = new Set(nonSkippedAssignments.map((a) => a.step_id));
 
   const passedSteps = data.results.filter(
     (r) => r.passed && nonSkippedStepIds.has(r.step_id)
   ).length;
-  const totalSteps = nonSkippedStepIds.size || steps.length; // fallback to all steps if skipped isn't wired yet
+
+  // If everything is skipped, treat total as 0 so we show "0/0"
+  const totalSteps =
+    nonSkippedStepIds.size > 0 ? nonSkippedStepIds.size : 0;
   const progress = totalSteps ? (passedSteps / totalSteps) * 100 : 0;
 
   const unitLabel = (data.unit as any).unit_id || data.unit.id;
@@ -170,13 +171,13 @@ export default function UnitDetailPage() {
     }
   }
 
-  // 🔹 OPEN rename modal (no window.prompt)
+  // Open rename modal
   function handleOpenRename() {
     setRenameValue(unitLabel); // prefill current ID
     setRenameOpen(true);
   }
 
-  // 🔹 CONFIRM rename inside our own modal
+  // Confirm rename inside our own modal
   async function handleConfirmRename() {
     const trimmed = renameValue.trim();
     if (!trimmed || trimmed === unitLabel) {
@@ -378,7 +379,6 @@ export default function UnitDetailPage() {
                 .map((s) => {
                   const a = assignmentsByStep.get(s.id) as any;
                   const r = resultsByStep.get(s.id);
-
                   const skipped = !!a?.skipped;
 
                   let resultLabel = "—";
@@ -401,16 +401,16 @@ export default function UnitDetailPage() {
                       <td>{s.name}</td>
                       <td>{a?.tester_id || "-"}</td>
                       <td>
-                        <div>{skipped ? "SKIPPED (N/A)" : a?.status || "-"}</div>
+                        <div>
+                          {skipped ? "SKIPPED (N/A)" : a?.status || "-"}
+                        </div>
                         {/* Allow marking/unmarking as not tested only if no result yet */}
                         {!r && a && (
                           <button
                             type="button"
                             className="btn btn-outline btn-xs"
                             style={{ marginTop: 4 }}
-                            onClick={() =>
-                              handleToggleSkip(a.id, a.skipped)
-                            }
+                            onClick={() => handleToggleSkip(a.id, a.skipped)}
                           >
                             {skipped ? "Re-enable step" : "Mark not tested"}
                           </button>
@@ -459,7 +459,7 @@ export default function UnitDetailPage() {
         </div>
       </section>
 
-      {/* ==== NEW: rename modal UI (Teams-friendly, no window.prompt) ==== */}
+      {/* Rename modal (Teams-friendly) */}
       {renameOpen && (
         <div
           className="prompt-backdrop"
