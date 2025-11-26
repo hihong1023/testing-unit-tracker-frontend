@@ -1,22 +1,19 @@
 // src/pages/UnitDetailPage.tsx
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
+
 export const API_BASE =
   "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
-
 
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
 
-  // Ensure we treat value as UTC (backend uses datetime.utcnow())
+  // Backend uses datetime.utcnow() → treat as UTC & convert to SGT (+8)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
+  const plus8 = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
 
-  // Add +8 hours for Singapore
-  const plus8 = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
-
-  // Format as YYYY-MM-DD HH:MM
   const y = plus8.getFullYear();
   const m = String(plus8.getMonth() + 1).padStart(2, "0");
   const d = String(plus8.getDate()).padStart(2, "0");
@@ -27,6 +24,7 @@ function formatSingaporeDateTime(iso?: string | null): string {
 
 export default function UnitDetailPage() {
   const prompt = usePrompt();
+  const navigate = useNavigate();
   const { unitId } = useParams();
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
@@ -74,7 +72,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${data.unit.id}/zip`,
+        `${API_BASE}/reports/unit/${encodeURIComponent(data.unit.id)}/zip`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
@@ -100,7 +98,9 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${data.unit.id}/step/${stepId}/zip`,
+        `${API_BASE}/reports/unit/${encodeURIComponent(
+          data.unit.id
+        )}/step/${stepId}/zip`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
@@ -136,7 +136,9 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${data.unit.id}/step/${stepId}/evidence`,
+        `${API_BASE}/reports/unit/${encodeURIComponent(
+          data.unit.id
+        )}/step/${stepId}/evidence`,
         {
           method: "DELETE",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -146,10 +148,66 @@ export default function UnitDetailPage() {
         throw new Error(await res.text());
       }
 
-      // Simple way: refresh the page so counts update
+      // simplest: full reload so evidence counts refresh
       window.location.reload();
     } catch (err: any) {
-      prompt.alert(`Failed to remove logs: ${err.message || err}`, "Remove Error");
+      prompt.alert(
+        `Failed to remove logs: ${err.message || err}`,
+        "Remove Error"
+      );
+    }
+  }
+
+  async function handleRenameUnit() {
+    // Basic text prompt – you can replace with a fancier modal later
+    const newId = window.prompt(
+      "Enter new unit ID:",
+      unitLabel
+    );
+
+    if (!newId) return;
+    const trimmed = newId.trim();
+    if (!trimmed || trimmed === unitLabel) return;
+
+    const confirm = await prompt.confirm(
+      `Rename unit "${unitLabel}" to "${trimmed}"?\n\nAll assignments, results, and evidence will follow the new ID.`,
+      "Rename Unit",
+      { confirmText: "Rename", cancelText: "Cancel" }
+    );
+    if (!confirm) return;
+
+    try {
+      const token = getToken();
+      const res = await fetch(
+        `${API_BASE}/units/${encodeURIComponent(data.unit.id)}/rename`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ new_unit_id: trimmed }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      prompt.alert(
+        `Unit ID has been renamed to "${trimmed}".`,
+        "Rename Successful"
+      );
+
+      // Navigate to new detail page so hooks refetch using new ID
+      navigate(`/units/${encodeURIComponent(trimmed)}/details`, {
+        replace: true,
+      });
+    } catch (err: any) {
+      prompt.alert(
+        `Rename failed: ${err.message || err}`,
+        "Rename Error"
+      );
     }
   }
 
@@ -196,6 +254,13 @@ export default function UnitDetailPage() {
             <div className="unit-detail-meta-row">
               <span className="unit-detail-meta-label">Unit ID</span>
               <span className="unit-detail-meta-value">{unitLabel}</span>
+              <button
+                type="button"
+                className="btn btn-outline btn-xs"
+                onClick={handleRenameUnit}
+              >
+                Rename unit
+              </button>
             </div>
             <div className="unit-detail-meta-row">
               <span className="unit-detail-meta-label">SKU</span>
@@ -319,6 +384,3 @@ export default function UnitDetailPage() {
     </div>
   );
 }
-
-
-
