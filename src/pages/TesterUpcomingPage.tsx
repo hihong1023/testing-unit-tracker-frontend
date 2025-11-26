@@ -29,13 +29,26 @@ export default function TesterUpcomingPage() {
     assignments: Assignment[];
     unitCount: number;
   }[] = useMemo(() => {
-    const base: Assignment[] = assignments ?? [];
+    if (!assignments) return [];
+
+    // ONLY future, active, non-skipped tests
+    const base: Assignment[] = assignments.filter(
+      (a) =>
+        !a.skipped && // ignore skipped tests
+        (a.status === "PENDING" || a.status === "RUNNING")
+    );
+
     const map: Record<string, Assignment[]> = {};
 
     base.forEach((a) => {
-      const dk = toDateKey(a.start_at);
-      if (!dk) return;
-      if (dk <= todayKey) return; // only future dates
+      // Prefer start_at; fall back to end_at if start_at is missing
+      const dk =
+        toDateKey(a.start_at) ??
+        toDateKey(a.end_at);
+
+      if (!dk) return;          // no dates at all → ignore
+      if (dk <= todayKey) return; // only future dates (tomorrow and beyond)
+
       if (!map[dk]) map[dk] = [];
       map[dk].push(a);
     });
