@@ -1,9 +1,10 @@
 // src/pages/UnitDetailPage.tsx
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
-import { useQueryClient } from "@tanstack/react-query"; 
+import { useQueryClient } from "@tanstack/react-query";
 
 export const API_BASE =
   "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
@@ -11,7 +12,7 @@ export const API_BASE =
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
 
-  // Backend uses datetime.utcnow() → treat as UTC & convert to SGT (+8)
+  // Backend uses datetime.utcnow() → treat as UTC (you currently don't offset)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
   const plus8 = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
 
@@ -27,11 +28,15 @@ export default function UnitDetailPage() {
   const prompt = usePrompt();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  
+
   const { unitId } = useParams();
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
-  
+
+  // Rename modal state
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+
   if (!unitId)
     return (
       <div className="page">
@@ -66,14 +71,14 @@ export default function UnitDetailPage() {
 
   // Progress: only count non-skipped steps
   const nonSkippedAssignments = data.assignments.filter(
-    (a: any) => !a.skipped // if skipped is undefined, this is still treated as "not skipped"
+    (a: any) => !a.skipped
   );
   const nonSkippedStepIds = new Set(nonSkippedAssignments.map((a) => a.step_id));
 
   const passedSteps = data.results.filter(
     (r) => r.passed && nonSkippedStepIds.has(r.step_id)
   ).length;
-  const totalSteps = nonSkippedStepIds.size || steps.length; // fallback to all steps if skipped isn't wired yet
+  const totalSteps = nonSkippedStepIds.size || steps.length;
   const progress = totalSteps ? (passedSteps / totalSteps) * 100 : 0;
 
   const unitLabel = (data.unit as any).unit_id || data.unit.id;
@@ -158,7 +163,7 @@ export default function UnitDetailPage() {
         throw new Error(await res.text());
       }
 
-      // simplest: full reload so evidence counts refresh
+      // ✅ just refetch this unit's details
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
       prompt.alert(
@@ -168,12 +173,23 @@ export default function UnitDetailPage() {
     }
   }
 
-  async function handleRenameUnit() {
-    const newId = window.prompt("Enter new unit ID:", unitLabel);
-    if (!newId) return;
+  // Open rename modal
+  function openRenameModal() {
+    setRenameValue(unitLabel);
+    setIsRenameOpen(true);
+  }
 
-    const trimmed = newId.trim();
-    if (!trimmed || trimmed === unitLabel) return;
+  // Confirm rename from modal
+  async function handleConfirmRename() {
+    const newIdRaw = renameValue;
+    if (!newIdRaw) {
+      return;
+    }
+    const trimmed = newIdRaw.trim();
+    if (!trimmed || trimmed === unitLabel) {
+      setIsRenameOpen(false);
+      return;
+    }
 
     const confirm = await prompt.confirm(
       `Rename unit "${unitLabel}" to "${trimmed}"?\n\nAll assignments, results, and evidence will follow the new ID.`,
@@ -200,6 +216,10 @@ export default function UnitDetailPage() {
         throw new Error(await res.text());
       }
 
+      await qc.invalidateQueries({ queryKey: ["units"] });
+
+      setIsRenameOpen(false);
+
       prompt.alert(
         `Unit ID has been renamed to "${trimmed}".`,
         "Rename Successful"
@@ -222,7 +242,6 @@ export default function UnitDetailPage() {
 
     const makeSkipped = !currentSkipped;
 
-    // Tiny confirm message (only when skipping)
     if (makeSkipped) {
       const ok = await prompt.confirm(
         "Mark this step as 'Not tested' (N/A) for this unit?\nIt will be removed from progress and queues.",
@@ -250,7 +269,7 @@ export default function UnitDetailPage() {
         throw new Error(await res.text());
       }
 
-      // easiest: reload page so status / progress update
+      // ✅ refresh unit details so skip/progress update
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
       prompt.alert(
@@ -306,7 +325,7 @@ export default function UnitDetailPage() {
               <button
                 type="button"
                 className="btn btn-outline btn-xs"
-                onClick={handleRenameUnit}
+                onClick={openRenameModal}
               >
                 Rename unit
               </button>
@@ -391,9 +410,7 @@ export default function UnitDetailPage() {
                       <td>{a?.tester_id || "-"}</td>
                       <td>
                         <div>
-                          {skipped
-                            ? "SKIPPED (N/A)"
-                            : a?.status || "-"}
+                          {skipped ? "SKIPPED (N/A)" : a?.status || "-"}
                         </div>
                         {/* Allow marking/unmarking as not tested only if no result yet */}
                         {!r && a && (
@@ -451,8 +468,57 @@ export default function UnitDetailPage() {
           </table>
         </div>
       </section>
+
+      {/* Rename modal */}
+      {isRenameOpen && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h2>Rename unit</h2>
+            <p className="text-muted">
+              Change the Unit ID. All assignments, results, and evidence will
+              move to the new ID.
+            </p>
+            <div style={{ marginTop: 8 }}>
+              <label
+                className="form-label"
+                style={{ display: "block", fontSize: 12, marginBottom: 4 }}
+              >
+                New Unit ID
+              </label>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                className="scheduler-field"
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => setIsRenameOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={handleConfirmRename}
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-
