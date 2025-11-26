@@ -112,6 +112,25 @@ export function useCreateUnit() {
   });
 }
 
+// Rename unit
+export function useRenameUnit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { oldId: string; newId: string }) => {
+      const { oldId, newId } = payload;
+      return request(`/units/${encodeURIComponent(oldId)}/rename`, {
+        method: "PATCH",
+        body: JSON.stringify({ new_unit_id: newId }),
+      });
+    },
+    onSuccess: () => {
+      // refresh units list
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+    },
+  });
+}
+
 export function useCreateResult() {
   const qc = useQueryClient();
   return useMutation({
@@ -146,3 +165,4 @@ export function useTesterNotifications(testerId: string | null) {
     refetchInterval: 5000, // poll every 5s for new ready notifications
   });
 }
+
