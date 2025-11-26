@@ -95,8 +95,10 @@ function TesterQueueTesterView() {
   const unitCards: UnitCard[] = useMemo(() => {
     if (!assignments) return [];
 
+    // Only include non-skipped assignments that are PENDING or RUNNING
     const base = assignments.filter(
-      (a) => a.status === "PENDING" || a.status === "RUNNING"
+      (a) =>
+        !a.skipped && (a.status === "PENDING" || a.status === "RUNNING")
     );
 
     const todayList = base.filter((a) => {
@@ -198,7 +200,6 @@ function TesterQueueTesterView() {
           const start = formatDateShort(a.start_at);
           const end = formatDateShort(a.end_at);
 
-          // ----- NEW: derive display status & colors -----
           const startKey = toDateKey(a.start_at);
           const endKey = toDateKey(a.end_at);
 
@@ -431,4 +432,3 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
-
