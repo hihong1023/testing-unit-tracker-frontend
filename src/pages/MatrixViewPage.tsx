@@ -23,6 +23,7 @@ function cellBackground(status: string, passed?: boolean): string {
   }
   if (status === "RUNNING") return "#cef010ff";
   if (status === "OVERDUE") return "#d6b910ff"; // overdue color
+  if (status === "SKIPPED") return "#e5e7eb"; // neutral grey
   return "#e5e7eb";
 }
 
@@ -33,12 +34,13 @@ function cellBorderColor(status: string, passed?: boolean): string {
   }
   if (status === "RUNNING") return "#6b5838ff";
   if (status === "OVERDUE") return "#cc7000"; // overdue border
+  if (status === "SKIPPED") return "#d1d5db"; // soft grey
   return "#d1d5db";
 }
 
 /* ---------- reusable table renderer ---------- */
 
-type CellStatusKind = "PENDING" | "RUNNING" | "RESULT" | "OVERDUE";
+type CellStatusKind = "PENDING" | "RUNNING" | "RESULT" | "OVERDUE" | "SKIPPED";
 
 function MatrixTable({
   rows,
@@ -176,7 +178,9 @@ function MatrixTable({
                         fontWeight: 700,
                         textTransform: "uppercase",
                         color:
-                          cell.passed === true
+                          cell.statusKind === "SKIPPED"
+                            ? "#6b7280" // grey text for N/A
+                            : cell.passed === true
                             ? "#166534"
                             : cell.passed === false
                             ? "#b91c1c"
@@ -210,7 +214,7 @@ export default function MatrixViewPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [page, setPage] = useState(0);
 
-  // New: hide completed toggle
+  // Hide completed toggle
   const [hideCompleted, setHideCompleted] = useState(true);
 
   // fetch all unit details in one go for the matrix
@@ -282,15 +286,18 @@ export default function MatrixViewPage() {
         for (const r of d.results) resultByStep.set(r.step_id, r);
 
         for (const step of stepsOrdered) {
-          const a = assignByStep.get(step.id) || null;
+          const a = assignByStep.get(step.id) as any || null;
           const r = resultByStep.get(step.id) || null;
           const tester = a?.tester_id ?? null;
+
+          const skipped = !!a?.skipped;
 
           let date: string | null = null;
           if (r?.finished_at) {
             // finished time takes priority
             date = formatDateFromISO(r.finished_at);
-          } else if (a?.start_at) {
+          } else if (!skipped && a?.start_at) {
+            // if skipped, we don't care about date
             date = formatDateFromISO(a.start_at as any);
           }
 
@@ -304,8 +311,11 @@ export default function MatrixViewPage() {
             passed = r.passed;
             statusLabel = r.passed ? "PASS" : "FAIL";
           } else if (a) {
-            // No result yet – infer from assignment status + date
-            if (a.status === "RUNNING") {
+            // No result yet
+            if (skipped) {
+              statusKind = "SKIPPED";
+              statusLabel = "N/A";
+            } else if (a.status === "RUNNING") {
               statusKind = "RUNNING";
               statusLabel = "RUNNING";
             } else {
@@ -366,7 +376,7 @@ export default function MatrixViewPage() {
 
   const anyLoading = unitsLoading || stepsLoading || detailsLoading;
 
-  // ===== NEW: filter out completed units when toggle is ON =====
+  // ===== filter out completed units when toggle is ON =====
   const filteredRows = useMemo(() => {
     if (rows.length === 0) return [];
     return rows.filter((row) => {
@@ -379,7 +389,7 @@ export default function MatrixViewPage() {
 
   /* ----- paging for fullscreen mode ----- */
 
-  const rowsPerPage = 12; // you can tweak this
+  const rowsPerPage = 12; // show 12 units at a time in fullscreen
   const totalPages =
     filteredRows.length === 0
       ? 1
@@ -418,7 +428,8 @@ export default function MatrixViewPage() {
           <p>
             Full-screen overview of all units vs all test steps. Cells show{" "}
             <strong>tester</strong>, <strong>date</strong> and{" "}
-            <strong>result</strong>.
+            <strong>result</strong>. Skipped steps are marked as{" "}
+            <strong>N/A</strong>.
           </p>
         </div>
 
@@ -545,7 +556,7 @@ export default function MatrixViewPage() {
               display: "flex",
               flexDirection: "column",
               overflow: "hidden", // no scrollbars; paging handles large sets
-              height: "100%", 
+              height: "100%",
             }}
           >
             <div
@@ -555,11 +566,7 @@ export default function MatrixViewPage() {
               }}
             >
               {/* fullscreen: compact table, forced to fit width, only subset of rows */}
-              <MatrixTable
-                rows={visibleRows}
-                steps={stepsOrdered}
-                compact={true}
-              />
+              <MatrixTable rows={visibleRows} steps={stepsOrdered} compact />
             </div>
           </div>
         </div>
@@ -567,4 +574,3 @@ export default function MatrixViewPage() {
     </div>
   );
 }
-
