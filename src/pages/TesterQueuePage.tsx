@@ -101,11 +101,6 @@ function TesterQueueTesterView() {
         !a.skipped && (a.status === "PENDING" || a.status === "RUNNING")
     );
 
-    const todayList = base.filter((a) => {
-      const dk = toDateKey(a.start_at);
-      if (!dk) return true; // unscheduled but ready
-      return dk <= todayKey;
-    });
 
     const byUnit = new Map<string, Assignment[]>();
     for (const a of todayList) {
@@ -432,3 +427,4 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
