@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
+import { useQueryClient } from "@tanstack/react-query"; 
 
 export const API_BASE =
   "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
@@ -25,10 +26,12 @@ function formatSingaporeDateTime(iso?: string | null): string {
 export default function UnitDetailPage() {
   const prompt = usePrompt();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  
   const { unitId } = useParams();
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
-
+  
   if (!unitId)
     return (
       <div className="page">
@@ -156,7 +159,7 @@ export default function UnitDetailPage() {
       }
 
       // simplest: full reload so evidence counts refresh
-      window.location.reload();
+      await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
       prompt.alert(
         `Failed to remove logs: ${err.message || err}`,
@@ -248,7 +251,7 @@ export default function UnitDetailPage() {
       }
 
       // easiest: reload page so status / progress update
-      window.location.reload();
+      await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
       prompt.alert(
         `Failed to update step: ${err.message || err}`,
@@ -451,4 +454,5 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
