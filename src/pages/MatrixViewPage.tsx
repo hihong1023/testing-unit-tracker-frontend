@@ -379,7 +379,7 @@ export default function MatrixViewPage() {
 
   /* ----- paging for fullscreen mode ----- */
 
-  const rowsPerPage = 10; // you can tweak this
+  const rowsPerPage = 12; // you can tweak this
   const totalPages =
     filteredRows.length === 0
       ? 1
@@ -545,6 +545,7 @@ export default function MatrixViewPage() {
               display: "flex",
               flexDirection: "column",
               overflow: "hidden", // no scrollbars; paging handles large sets
+              height: "100%", 
             }}
           >
             <div
@@ -566,3 +567,4 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
