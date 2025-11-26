@@ -309,6 +309,19 @@ body::-webkit-scrollbar-thumb {
   border-color: #cbd5f5;
 }
 
+.btn-secondary {
+  background: #ffffff;
+  color: var(--text-main);
+  border-color: #d1d5db;
+  box-shadow: 0 6px 16px rgba(148, 163, 184, 0.25);
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(148, 163, 184, 0.35);
+}
 /* ===================== */
 /* Status pill           */
 /* ===================== */
@@ -1303,3 +1316,4 @@ body::-webkit-scrollbar-thumb {
   justify-content: flex-end;
   margin-top: 12px;
 }
+
