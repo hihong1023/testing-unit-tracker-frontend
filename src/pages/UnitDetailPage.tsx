@@ -12,7 +12,7 @@ function formatSingaporeDateTime(iso?: string | null): string {
 
   // Backend uses datetime.utcnow() → treat as UTC & convert to SGT (+8)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  const plus8 = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
+  const plus8 = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
 
   const y = plus8.getFullYear();
   const m = String(plus8.getMonth() + 1).padStart(2, "0");
@@ -451,3 +451,4 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
