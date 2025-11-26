@@ -217,25 +217,14 @@ export default function UnitsPage() {
                   ×
                 </button>
               )}
-
               <UnitCard unit={u} />
-
-              {/* Simple rename button under card (supervisor only) */}
-              {isSupervisor && (
-                <button
-                  type="button"
-                  onClick={() => handleRename(u.unit_id)}
-                  className="btn btn-secondary"
-                  style={{ marginTop: 8, width: "100%" }}
-                >
-                  Rename unit
-                </button>
-              )}
             </div>
           ))}
         </section>
       )}
+
     </div>
   );
 }
+
 
