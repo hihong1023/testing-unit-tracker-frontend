@@ -109,6 +109,36 @@ export default function UnitDetailPage() {
     }
   }
 
+  async function handleDownloadTraveller() {
+  try {
+    const token = getToken();
+    const res = await fetch(
+      `${API_BASE}/reports/unit/${encodeURIComponent(data.unit.id)}/traveller.xlsx`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    );
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${data.unit.id}_traveller.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err: any) {
+    prompt.alert(
+      `Download traveller log failed: ${err.message || err}`,
+      "Download Error"
+    );
+  }
+}
+
   async function handleDownloadStepLogs(stepId: number) {
     try {
       const token = getToken();
@@ -346,12 +376,21 @@ export default function UnitDetailPage() {
 
           <div className="unit-detail-actions">
             <p className="text-muted" style={{ marginBottom: 8 }}>
-              Export all attached logs and screenshots for this unit in one ZIP.
+              Export all attached logs and screenshots for this unit in one ZIP,
+              or download a traveller log overview.
             </p>
             <button className="btn btn-primary" onClick={handleDownloadZip}>
               Download all evidence (ZIP)
             </button>
+            <button
+              className="btn btn-secondary"
+              style={{ marginTop: 6 }}
+              onClick={handleDownloadTraveller}
+            >
+              Download traveller log (Excel)
+            </button>
           </div>
+
         </div>
       </section>
 
@@ -510,4 +549,5 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
