@@ -2,9 +2,11 @@
 import { useState, FormEvent, useMemo } from "react";
 import { useUnits, useCreateUnit, useDeleteUnit, useRenameUnit } from "../hooks";
 import UnitCard from "../components/UnitCard";
-import { getRole } from "../api";
+import { getRole, getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
+const API_BASE =
+  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 type StatusFilter = "all" | "active" | "completed";
 type SortBy = "unit" | "progress";
@@ -22,6 +24,8 @@ export default function UnitsPage() {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("unit");
+
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -59,6 +63,42 @@ export default function UnitsPage() {
       );
     }
   }
+
+
+  async function handleBulkDownloadTraveller() {
+  if (selectedUnits.length === 0) return;
+
+  try {
+    const token = getToken();
+    const res = await fetch(`${API_BASE}/reports/traveller/bulk.xlsx`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ unit_ids: selectedUnits }),
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "traveller_logs.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err: any) {
+    prompt.alert(
+      `Bulk traveller download failed: ${err.message || err}`,
+      "Download Error"
+    );
+  }
+}
 
   const stats = useMemo(() => {
     if (!data) return null;
@@ -197,6 +237,18 @@ export default function UnitsPage() {
                 <strong>{stats.total}</strong> units.
               </p>
             )}
+            
+            {isSupervisor && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ marginTop: 8, alignSelf: "flex-start" }}
+                disabled={selectedUnits.length === 0}
+                onClick={handleBulkDownloadTraveller}
+              >
+                Download traveller logs ({selectedUnits.length || 0})
+              </button>
+            )}         
           </div>
         </div>
       </section>
@@ -208,23 +260,47 @@ export default function UnitsPage() {
             <div key={u.unit_id} className="unit-wrapper">
               {/* Delete button only for supervisor */}
               {isSupervisor && (
-                <button
-                  type="button"
-                  onClick={() => handleDelete(u.unit_id)}
-                  className="unit-delete-btn"
-                  title="Delete unit"
-                >
-                  ×
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(u.unit_id)}
+                    className="unit-delete-btn"
+                    title="Delete unit"
+                  >
+                    ×
+                  </button>
+
+                  {/* ✅ select for bulk traveller log */}
+                  <input
+                    type="checkbox"
+                    checked={selectedUnits.includes(u.unit_id)}
+                    onChange={() =>
+                      setSelectedUnits((prev) =>
+                        prev.includes(u.unit_id)
+                          ? prev.filter((id) => id !== u.unit_id)
+                          : [...prev, u.unit_id]
+                      )
+                    }
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 4,
+                      zIndex: 2,
+                      transform: "scale(1.05)",
+                      cursor: "pointer",
+                    }}
+                  />
+                </>
               )}
+
               <UnitCard unit={u} />
             </div>
           ))}
         </section>
       )}
-
     </div>
   );
 }
+
 
 
