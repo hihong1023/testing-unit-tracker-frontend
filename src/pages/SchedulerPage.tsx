@@ -566,7 +566,8 @@ export default function SchedulerPage() {
                             >
                               <option value="PENDING">PENDING</option>
                               <option value="RUNNING">RUNNING</option>
-                              <option value="DONE">DONE</option>
+                              <option value="PASS">PASS</option>
+                              <option value="FAIL">FAIL</option>
                             </select>
                           </td>
                           <td>
@@ -592,6 +593,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
