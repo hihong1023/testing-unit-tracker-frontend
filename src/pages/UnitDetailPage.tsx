@@ -430,7 +430,15 @@ export default function UnitDetailPage() {
 
                   let resultLabel = "—";
                   let resultClass = "result-pill result-pill--none";
-                  if (r) {
+
+                  if (a?.status === "PASS") {
+                    resultLabel = "PASS";
+                    resultClass = "result-pill result-pill--pass";
+                  } else if (a?.status === "FAIL") {
+                    resultLabel = "FAIL";
+                    resultClass = "result-pill result-pill--fail";
+                  } else if (r) {
+                    // fall back to real result record if no override from scheduler
                     if (r.passed) {
                       resultLabel = "PASS";
                       resultClass = "result-pill result-pill--pass";
@@ -549,5 +557,6 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
