@@ -16,6 +16,21 @@ function formatDateFromISO(value?: string | null): string {
   return value.slice(0, 10); // "YYYY-MM-DD"
 }
 
+function toISODate(value: any): string | null {
+  if (!value) return null;
+  if (typeof value === "string") {
+    return value.slice(0, 10); // assume ISO-like
+  }
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  try {
+    return new Date(value).toISOString().slice(0, 10);
+  } catch {
+    return null;
+  }
+}
+
 type CellStatusKind =
   | "PENDING"
   | "RUNNING"
@@ -293,14 +308,24 @@ export default function MatrixViewPage() {
           const r = resultByStep.get(step.id) || null;
           const tester = a?.tester_id ?? null;
           const skipped = !!a?.skipped;
-        
-          // ----- date: finished_at > start_at -----
+          
+          // ----- date: scheduler overrides result -----
+          // 1) Prefer scheduler’s schedule dates (end_at, then start_at)
+          // 2) Only if no schedule date, fall back to result.finished_at
           let date: string | null = null;
-          if (r?.finished_at) {
-            date = formatDateFromISO(r.finished_at);
-          } else if (!skipped && a?.start_at) {
-            date = formatDateFromISO(a.start_at as any);
+          
+          if (!skipped && a) {
+            const schedISO = toISODate(a.start_at);
+            if (schedISO) {
+              date = schedISO;
+            }
           }
+          
+          if (!date && r?.finished_at) {
+            // only use result date when no schedule date
+            date = formatDateFromISO(r.finished_at);
+          }
+
         
           let statusLabel = "PENDING";
           let statusKind: CellStatusKind = "PENDING";
@@ -584,4 +609,5 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
