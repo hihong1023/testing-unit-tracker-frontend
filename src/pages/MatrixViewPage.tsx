@@ -315,17 +315,12 @@ export default function MatrixViewPage() {
           let date: string | null = null;
           
           if (!skipped && a) {
-            const schedISO = toISODate(a.start_at);
+            const schedISO = toISODate(a.end_at ?? a.start_at); // end > start
             if (schedISO) {
               date = schedISO;
             }
           }
           
-          if (!date && r?.finished_at) {
-            // only use result date when no schedule date
-            date = formatDateFromISO(r.finished_at);
-          }
-
         
           let statusLabel = "PENDING";
           let statusKind: CellStatusKind = "PENDING";
@@ -609,5 +604,6 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
