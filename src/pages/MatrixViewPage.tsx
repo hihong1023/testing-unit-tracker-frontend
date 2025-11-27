@@ -16,31 +16,34 @@ function formatDateFromISO(value?: string | null): string {
   return value.slice(0, 10); // "YYYY-MM-DD"
 }
 
-function cellBackground(status: string, passed?: boolean): string {
-  if (status === "RESULT") {
-    if (passed === true) return "#34d870ff";
-    if (passed === false) return "#f08d8dff";
-  }
-  if (status === "RUNNING") return "#cef010ff";
-  if (status === "OVERDUE") return "#d6b910ff"; // overdue color
-  if (status === "SKIPPED") return "#e5e7eb"; // neutral grey
+type CellStatusKind =
+  | "PENDING"
+  | "RUNNING"
+  | "PASS"
+  | "FAIL"
+  | "OVERDUE"
+  | "SKIPPED";
+
+function cellBackground(kind: CellStatusKind, passed?: boolean): string {
+  if (kind === "PASS") return "#34d870ff";
+  if (kind === "FAIL") return "#f08d8dff";
+  if (kind === "RUNNING") return "#cef010ff";
+  if (kind === "OVERDUE") return "#d6b910ff"; // overdue colour
+  if (kind === "SKIPPED") return "#e5e7eb"; // neutral grey
   return "#e5e7eb";
 }
 
-function cellBorderColor(status: string, passed?: boolean): string {
-  if (status === "RESULT") {
-    if (passed === true) return "#16a34a";
-    if (passed === false) return "#ef4444";
-  }
-  if (status === "RUNNING") return "#6b5838ff";
-  if (status === "OVERDUE") return "#cc7000"; // overdue border
-  if (status === "SKIPPED") return "#d1d5db"; // soft grey
+function cellBorderColor(kind: CellStatusKind, passed?: boolean): string {
+  if (kind === "PASS") return "#16a34a";
+  if (kind === "FAIL") return "#ef4444";
+  if (kind === "RUNNING") return "#6b5838ff";
+  if (kind === "OVERDUE") return "#cc7000"; // overdue border
+  if (kind === "SKIPPED") return "#d1d5db"; // soft grey
   return "#d1d5db";
 }
 
 /* ---------- reusable table renderer ---------- */
 
-type CellStatusKind = "PENDING" | "RUNNING" | "RESULT" | "OVERDUE" | "SKIPPED";
 
 function MatrixTable({
   rows,
@@ -286,41 +289,43 @@ export default function MatrixViewPage() {
         for (const r of d.results) resultByStep.set(r.step_id, r);
 
         for (const step of stepsOrdered) {
-          const a = assignByStep.get(step.id) as any || null;
+          const a = (assignByStep.get(step.id) as any) || null;
           const r = resultByStep.get(step.id) || null;
           const tester = a?.tester_id ?? null;
-
           const skipped = !!a?.skipped;
-
+        
+          // ----- date: finished_at > start_at -----
           let date: string | null = null;
           if (r?.finished_at) {
-            // finished time takes priority
             date = formatDateFromISO(r.finished_at);
           } else if (!skipped && a?.start_at) {
-            // if skipped, we don't care about date
             date = formatDateFromISO(a.start_at as any);
           }
-
+        
           let statusLabel = "PENDING";
           let statusKind: CellStatusKind = "PENDING";
-          let passed: boolean | undefined;
-
-          if (r) {
-            // Result exists
-            statusKind = "RESULT";
-            passed = r.passed;
-            statusLabel = r.passed ? "PASS" : "FAIL";
-          } else if (a) {
-            // No result yet
-            if (skipped) {
-              statusKind = "SKIPPED";
-              statusLabel = "N/A";
-            } else if (a.status === "RUNNING") {
+          let passed: boolean | undefined = undefined;
+        
+          if (!a) {
+            // no assignment row yet => keep PENDING
+          } else if (skipped) {
+            statusKind = "SKIPPED";
+            statusLabel = "N/A";
+          } else {
+            // 🔹 main truth: assignment.status
+            const raw = (a.status || "").toString().toUpperCase();
+        
+            if (raw === "PASS" || raw === "FAIL") {
+              statusKind = raw as CellStatusKind;
+              statusLabel = raw;
+              passed = raw === "PASS";
+            } else if (raw === "RUNNING") {
               statusKind = "RUNNING";
               statusLabel = "RUNNING";
             } else {
-              // derive date key from start_at
+              // PENDING / DONE / empty → derive from dates
               let startStr: string | null = null;
+        
               if (typeof a.start_at === "string") {
                 startStr = a.start_at.slice(0, 10);
               } else if (a.start_at instanceof Date) {
@@ -333,31 +338,36 @@ export default function MatrixViewPage() {
                   startStr = null;
                 }
               }
-
+        
               if (startStr) {
                 if (startStr < todayKey) {
-                  // overdue
                   statusKind = "OVERDUE";
                   statusLabel = "OVERDUE";
                 } else if (startStr === todayKey) {
-                  // due today
                   statusKind = "RUNNING";
                   statusLabel = "RUNNING";
                 } else {
-                  // future
                   statusKind = "PENDING";
                   statusLabel = "PENDING";
                 }
               } else {
-                // unscheduled
                 statusKind = "PENDING";
                 statusLabel = "PENDING";
               }
+        
+              // 🔹 fallback for legacy data:
+              // if schedule has no explicit PASS/FAIL but Result exists, use Result
+              if (!raw && r) {
+                statusKind = r.passed ? "PASS" : "FAIL";
+                statusLabel = r.passed ? "PASS" : "FAIL";
+                passed = r.passed;
+              }
             }
           }
-
+        
           cells[step.id] = { tester, date, statusLabel, statusKind, passed };
         }
+
       } else {
         // no details yet -> everything pending
         for (const step of stepsOrdered) {
@@ -574,3 +584,4 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
