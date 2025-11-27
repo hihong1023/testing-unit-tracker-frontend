@@ -59,7 +59,7 @@ function addDays(dateStr: string, days: number): string {
   dt.setDate(dt.getDate() + days);
   const yy = dt.getFullYear();
   const mm = String(dt.getMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getDate());
+  const dd = String(dt.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
 
@@ -592,6 +592,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
