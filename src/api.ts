@@ -211,18 +211,6 @@ export function fetchTesters(): Promise<string[]> {
   return request("/testers");
 }
 
-// 🔹 NEW: get tester groups for scheduler dropdown
-export async function fetchTesterGroups(): Promise<TesterGroups> {
-  const token = getToken();
-  const res = await fetch(`${API_BASE}/testers/groups`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch tester groups: ${await res.text()}`);
-  }
-  return res.json();
-}
-
 export function fetchTesterAssignments(
   testerId: string
 ): Promise<Assignment[]> {
@@ -327,4 +315,8 @@ export async function duplicateSchedule(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function fetchTesterGroups(): Promise<Record<string, string[]>> {
+  return request("/testers/groups");
 }
