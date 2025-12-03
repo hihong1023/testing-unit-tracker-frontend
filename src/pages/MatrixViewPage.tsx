@@ -57,6 +57,14 @@ function cellBorderColor(kind: CellStatusKind, passed?: boolean): string {
   return "#d1d5db";
 }
 
+function displayTester(tester?: string | null): string {
+  if (!tester) return "";
+  if (tester.startsWith("group:")) {
+    return tester.slice("group:".length); // "group:Physical Layer" -> "Physical Layer"
+  }
+  return tester;
+}
+
 /* ---------- reusable table renderer ---------- */
 
 
@@ -178,7 +186,7 @@ function MatrixTable({
                         color: "#111827",
                       }}
                     >
-                      {cell.tester || "-"}
+                      {displayTester(cell.tester) || "-"}
                     </div>
                     <div
                       style={{
@@ -604,6 +612,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
