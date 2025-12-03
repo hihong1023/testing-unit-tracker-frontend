@@ -5,6 +5,7 @@ import {
   useSteps,
   useTesters,
   useUpdateAssignment,
+  useTesterGroups,
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
 import { usePrompt } from "../components/PromptProvider";
@@ -169,6 +170,7 @@ export default function SchedulerPage() {
   const { data: assignments, isLoading, error } = useAssignmentsSchedule();
   const { data: steps } = useSteps();
   const { data: testers } = useTesters();
+  const { data: testerGroups } = useTesterGroups();
   const updateAssignment = useUpdateAssignment();
   const prompt = usePrompt();
 
@@ -218,6 +220,27 @@ export default function SchedulerPage() {
     list.sort((a, b) => a.unit_id.localeCompare(b.unit_id));
     return list;
   }, [assignments, stepsById]);
+
+    const testerOptions = useMemo(
+    () =>
+      [
+        // Group options: value is "group:<name>"
+        ...(testerGroups
+          ? Object.keys(testerGroups).map((groupName) => ({
+              value: `group:${groupName}`,
+              label: `${groupName} (group)`,
+            }))
+          : []),
+        // Individual tester options
+        ...(testers
+          ? testers.map((t) => ({
+              value: t,
+              label: t,
+            }))
+          : []),
+      ],
+    [testerGroups, testers]
+  );
 
   function buildBaseRow(a: Assignment): RowState {
     return {
@@ -509,17 +532,14 @@ export default function SchedulerPage() {
                               className="scheduler-field"
                               value={row.tester_id || ""}
                               onChange={(e) =>
-                                handleFieldChange(
-                                  a,
-                                  "tester_id",
-                                  e.target.value
-                                )
+                                handleFieldChange(a, "tester_id", e.target.value)
                               }
                             >
                               <option value="">(unassigned)</option>
-                              {testers?.map((t) => (
-                                <option key={t} value={t}>
-                                  {t}
+                            
+                              {testerOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
                                 </option>
                               ))}
                             </select>
@@ -593,6 +613,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
