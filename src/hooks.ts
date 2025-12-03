@@ -17,8 +17,10 @@ import {
   getRole,
   getTesterNotifications, // NEW
   deleteUnit,             // moved up here
+  fetchTesterGroups,
 } from "./api";
 import type { Notification } from "./api"; // NEW
+import type { Notification, TesterGroups } from "./api"; // NEW
 
 // Polling intervals (ms)
 const UNITS_REFRESH_MS = 10000; // 10s
@@ -78,6 +80,15 @@ export function useTesters() {
   return useQuery({
     queryKey: ["testers"],
     queryFn: fetchTesters,
+    enabled: role === "supervisor",
+  });
+}
+
+export function useTesterGroups() {
+  const role = getRole();
+  return useQuery<TesterGroups>({
+    queryKey: ["testerGroups"],
+    queryFn: fetchTesterGroups,
     enabled: role === "supervisor",
   });
 }
@@ -188,3 +199,4 @@ export function useTesterSchedule(testerId: string) {
     },
   });
 }
+
