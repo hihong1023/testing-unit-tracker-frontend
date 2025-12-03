@@ -1,6 +1,7 @@
 // src/api.ts
 
-export const API_BASE = "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
+export const API_BASE =
+  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 // ---------- Types & runtime exports ----------
 
@@ -96,6 +97,9 @@ export interface Notification {
   read: boolean;
 }
 
+// 🔹 NEW: tester group type (name -> list of testers)
+export type TesterGroups = Record<string, string[]>;
+
 // ---------- Token & user helpers ----------
 
 export function getToken(): string | null {
@@ -135,7 +139,8 @@ export function getUser(): UserInfo | null {
 
 // ---------- Generic request wrapper ----------
 
-async function request(path: string, options: RequestInit = {}) {
+// 🔹 CHANGE: export this so hooks.ts can use it
+export async function request(path: string, options: RequestInit = {}) {
   const token = getToken();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -204,6 +209,18 @@ export function fetchAssignmentsSchedule(): Promise<Assignment[]> {
 
 export function fetchTesters(): Promise<string[]> {
   return request("/testers");
+}
+
+// 🔹 NEW: get tester groups for scheduler dropdown
+export async function fetchTesterGroups(): Promise<TesterGroups> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/testers/groups`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch tester groups: ${await res.text()}`);
+  }
+  return res.json();
 }
 
 export function fetchTesterAssignments(
@@ -311,6 +328,3 @@ export async function duplicateSchedule(
     body: JSON.stringify(payload),
   });
 }
-
-
-
