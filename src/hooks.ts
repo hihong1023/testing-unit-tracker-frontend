@@ -19,7 +19,6 @@ import {
   deleteUnit,             // moved up here
   fetchTesterGroups,
 } from "./api";
-import type { Notification } from "./api"; // NEW
 import type { Notification, TesterGroups } from "./api"; // NEW
 
 // Polling intervals (ms)
@@ -199,5 +198,6 @@ export function useTesterSchedule(testerId: string) {
     },
   });
 }
+
 
 
