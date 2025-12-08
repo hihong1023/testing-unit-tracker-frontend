@@ -18,6 +18,7 @@ import {
   getTesterNotifications, // NEW
   deleteUnit,             // moved up here
   fetchTesterGroups,
+  setTesterAssignmentStatus,
 } from "./api";
 import type { Notification, TesterGroups } from "./api"; // NEW
 
@@ -195,6 +196,26 @@ export function useTesterSchedule(testerId: string) {
         throw new Error(await res.text());
       }
       return res.json();
+    },
+  });
+}
+
+export function useTesterSetStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assignmentId,
+      status,
+    }: {
+      assignmentId: string;
+      status: "RUNNING" | "PENDING";
+    }) => setTesterAssignmentStatus(assignmentId, status),
+    onSuccess: () => {
+      // refresh queue & schedule so UI updates
+      qc.invalidateQueries({ queryKey: ["testerQueue"] });
+      qc.invalidateQueries({ queryKey: ["testerAssignments"] });
+      qc.invalidateQueries({ queryKey: ["testerSchedule"] });
+      qc.invalidateQueries({ queryKey: ["assignmentsSchedule"] });
     },
   });
 }
