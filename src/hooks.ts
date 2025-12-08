@@ -211,14 +211,16 @@ export function useTesterSetStatus() {
       status: "RUNNING" | "PENDING";
     }) => setTesterAssignmentStatus(assignmentId, status),
     onSuccess: () => {
-      // refresh queue & schedule so UI updates
-      qc.invalidateQueries({ queryKey: ["testerQueue"] });
+      // invalidate all tester-related views
       qc.invalidateQueries({ queryKey: ["testerAssignments"] });
+      qc.invalidateQueries({ queryKey: ["testerQueue"] });
       qc.invalidateQueries({ queryKey: ["testerSchedule"] });
+      // also refresh scheduler matrix etc.
       qc.invalidateQueries({ queryKey: ["assignmentsSchedule"] });
     },
   });
 }
+
 
 
 
