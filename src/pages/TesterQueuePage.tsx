@@ -2,7 +2,12 @@
 import React, { useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRole, getUser, createResult } from "../api";
-import { useTesterAssignments, useUnits, useSteps } from "../hooks";
+import {
+  useTesterAssignments,
+  useUnits,
+  useSteps,
+  useTesterSetStatus,          // 👈 NEW
+} from "../hooks";
 import type { Assignment, TestStep, UnitSummary } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
@@ -79,6 +84,8 @@ function TesterQueueTesterView() {
     },
   });
 
+  const statusMutation = useTesterSetStatus();   // 👈 NEW
+
   if (!testerId) {
     return (
       <div>
@@ -97,8 +104,7 @@ function TesterQueueTesterView() {
 
     // Only include non-skipped assignments that are PENDING or RUNNING
     const base = assignments.filter(
-      (a) =>
-        !a.skipped && (a.status === "PENDING" || a.status === "RUNNING")
+      (a) => !a.skipped && (a.status === "PENDING" || a.status === "RUNNING")
     );
 
     const todayList = base;
@@ -159,6 +165,24 @@ function TesterQueueTesterView() {
     });
   };
 
+  const handleStartRunning = async (card: UnitCard) => {   // 👈 NEW
+    if (statusMutation.isLoading) return;
+
+    const ok = await prompt.confirm(
+      `Start test for ${card.unit_id} – ${
+        card.step?.name ?? `Step ${card.assignment.step_id}`
+      }?`,
+      "Mark as RUNNING",
+      { confirmText: "Start", cancelText: "Cancel" }
+    );
+    if (!ok) return;
+
+    statusMutation.mutate({
+      assignmentId: card.assignment.id,
+      status: "RUNNING",
+    });
+  };
+
   return (
     <div>
       <h2>Today&apos;s Queue (Tester)</h2>
@@ -205,14 +229,7 @@ function TesterQueueTesterView() {
             if (endKey && endKey < todayKey) {
               visualStatus = "OVERDUE";
             }
-            // Today (or started already): treat as RUNNING
-            else if (
-              startKey &&
-              startKey <= todayKey &&
-              (!endKey || todayKey <= endKey)
-            ) {
-              visualStatus = "RUNNING";
-            }
+            // Today window: still show PENDING until tester clicks RUNNING
           }
 
           let statusColor = "#e5e7eb";
@@ -300,49 +317,78 @@ function TesterQueueTesterView() {
                 style={{
                   marginTop: 8,
                   display: "flex",
-                  justifyContent: "space-between",
-                  gap: "0.4rem",
+                  flexDirection: "column",
+                  gap: "0.35rem",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => handleQuickResult(card, true)}
-                  disabled={resultMutation.isLoading}
+                {/* RUNNING button – only for PENDING assignments */}
+                {a.status === "PENDING" && (
+                  <button
+                    type="button"
+                    onClick={() => handleStartRunning(card)}
+                    disabled={statusMutation.isLoading}
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: 999,
+                      border: "1px solid #facc15",
+                      background: "#fef9c3",
+                      color: "#854d0e",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    MARK AS RUNNING
+                  </button>
+                )}
+
+                <div
                   style={{
-                    flex: 1,
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: 999,
-                    border: "1px solid #22c55e",
-                    background: "#dcfce7",
-                    color: "#166534",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "0.4rem",
                   }}
                 >
-                  PASS
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickResult(card, false)}
-                  disabled={resultMutation.isLoading}
-                  style={{
-                    flex: 1,
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: 999,
-                    border: "1px solid #f97373",
-                    background: "#fee2e2",
-                    color: "#b91c1c",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  FAIL
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickResult(card, true)}
+                    disabled={resultMutation.isLoading}
+                    style={{
+                      flex: 1,
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: 999,
+                      border: "1px solid #22c55e",
+                      background: "#dcfce7",
+                      color: "#166534",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    PASS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickResult(card, false)}
+                    disabled={resultMutation.isLoading}
+                    style={{
+                      flex: 1,
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: 999,
+                      border: "1px solid #f97373",
+                      background: "#fee2e2",
+                      color: "#b91c1c",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    FAIL
+                  </button>
+                </div>
               </div>
 
-              {resultMutation.isLoading && (
+              {(resultMutation.isLoading || statusMutation.isLoading) && (
                 <div
                   style={{
                     marginTop: 4,
@@ -427,6 +473,3 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
-
-
-
