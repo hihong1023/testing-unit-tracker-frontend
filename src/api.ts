@@ -84,6 +84,15 @@ export interface TesterQueueResponse {
   blocked: TesterTask[];
 }
 
+export function setTesterAssignmentStatus(
+  assignmentId: string,
+  status: "RUNNING" | "PENDING"
+): Promise<Assignment> {
+  return request(`/tester/assignments/${assignmentId}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}
 // ---------- Notifications ----------
 
 export interface Notification {
@@ -320,3 +329,4 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
+
