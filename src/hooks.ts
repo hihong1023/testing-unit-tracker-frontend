@@ -1,6 +1,6 @@
 // src/hooks.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { API_BASE, getToken, request } from "./api";
+import { getToken, request } from "./api";;
 import type { Assignment } from "./api";
 
 import {
@@ -185,20 +185,12 @@ export function useTesterSchedule(testerId: string) {
     enabled: !!testerId,
     queryFn: async () => {
       if (!testerId) return [];
-      const token = getToken();
-      const res = await fetch(
-        `${API_BASE}/tester/schedule?tester_id=${encodeURIComponent(testerId)}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        }
-      );
-      if (!res.ok) {
-        throw new Error(await res.text());
-      }
-      return res.json();
+      const params = new URLSearchParams({ tester_id: testerId });
+      return request(`/tester/schedule?${params.toString()}`);
     },
   });
 }
+
 
 export function useTesterSetStatus() {
   const qc = useQueryClient();
@@ -220,6 +212,7 @@ export function useTesterSetStatus() {
     },
   });
 }
+
 
 
 
