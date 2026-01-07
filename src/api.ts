@@ -1,10 +1,7 @@
 // src/api.ts
-
-// src/api.ts
-export const API_BASE = (
-  (import.meta.env.VITE_API_BASE as string | undefined) ??
-  "http://localhost:8000"
-).replace(/\/+$/, "");
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:8000";
 
 
 
@@ -334,6 +331,7 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
+
 
 
 
