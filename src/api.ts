@@ -150,9 +150,9 @@ export function getUser(): UserInfo | null {
 
 // ---------- Generic request wrapper ----------
 
-// 🔹 CHANGE: export this so hooks.ts can use it
 export async function request(path: string, options: RequestInit = {}) {
   const token = getToken();
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
@@ -160,7 +160,7 @@ export async function request(path: string, options: RequestInit = {}) {
 
   if (token) (headers as any).Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
   });
@@ -285,11 +285,12 @@ export async function uploadEvidence(
   formData.append("result_id", result_id);
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/uploads`, {
+  const res = await fetch(`${API_BASE_URL}/uploads`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: formData,
   });
+
   if (!res.ok) {
     throw new Error(await res.text());
   }
