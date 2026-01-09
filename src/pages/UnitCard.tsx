@@ -1,7 +1,6 @@
 // src/components/UnitCard.tsx
 import { Link } from "react-router-dom";
 
-// Local copy of the summary type used for display
 interface UnitSummary {
   unit_id: string;
   status: string;
@@ -42,9 +41,12 @@ export default function UnitCard({ unit }: Props) {
       ? unit.next_step_name
       : "—";
 
+  // ✅ IMPORTANT: encode unit_id for URL safety
+  const encodedId = encodeURIComponent(unit.unit_id);
+
   return (
     <Link
-      to={`/units/${unit.unit_id}`}
+      to={`/units/${encodedId}`}
       className={`unit-tile unit-tile--${key}`}
     >
       <div className="unit-tile__id">{unit.unit_id}</div>
