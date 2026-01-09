@@ -8,7 +8,7 @@ import {
   useTesterGroups,
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
-import { duplicateSchedule as duplicateScheduleApi } from "../api";
+import { API_BASE_URL, getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
 /* =========================================================
@@ -63,7 +63,7 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /* =========================================================
-   Duplicate Modal (outside page to prevent remount typing issues)
+   Duplicate Modal (kept outside page)
    ========================================================= */
 function DuplicateModal({
   source,
@@ -133,12 +133,10 @@ function DuplicateModal({
 
               try {
                 await onConfirm(source, parsedNewUnits, duplicateShiftDays);
-
                 await prompt.alert(
                   `Schedule duplicated to: ${parsedNewUnits.join(", ")}`,
                   "Success"
                 );
-
                 onClose();
               } catch (err: any) {
                 await prompt.alert(
@@ -176,15 +174,12 @@ export default function SchedulerPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Duplicate schedule modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateUnitIdsText, setDuplicateUnitIdsText] = useState("");
   const [duplicateShiftDays, setDuplicateShiftDays] = useState(1);
 
-  // which unit card is expanded (null = all collapsed)
   const [openUnitId, setOpenUnitId] = useState<string | null>(null);
 
-  // Reset edits when assignments refresh
   useEffect(() => {
     setEditState({});
   }, [assignments]);
@@ -218,25 +213,23 @@ export default function SchedulerPage() {
     return list;
   }, [assignments, stepsById]);
 
-  const testerOptions = useMemo(() => {
-    const groupOpts =
-      testerGroups
+  const testerOptions = useMemo(
+    () => [
+      ...(testerGroups
         ? Object.keys(testerGroups).map((groupName) => ({
             value: `group:${groupName}`,
             label: `${groupName} (group)`,
           }))
-        : [];
-
-    const testerOpts =
-      testers
+        : []),
+      ...(testers
         ? testers.map((t) => ({
             value: t,
             label: t,
           }))
-        : [];
-
-    return [...groupOpts, ...testerOpts];
-  }, [testerGroups, testers]);
+        : []),
+    ],
+    [testerGroups, testers]
+  );
 
   function buildBaseRow(a: Assignment): RowState {
     return {
@@ -249,8 +242,7 @@ export default function SchedulerPage() {
   }
 
   function getRowState(a: Assignment): RowState {
-    const existing = editState[a.id];
-    return existing ?? buildBaseRow(a);
+    return editState[a.id] ?? buildBaseRow(a);
   }
 
   function handleFieldChange(
@@ -263,13 +255,10 @@ export default function SchedulerPage() {
       let next: RowState = { ...current, [field]: value };
 
       if (field === "start_date") {
-        if (next.end_date && next.end_date < value) {
-          next.end_date = value;
-        }
+        if (next.end_date && next.end_date < value) next.end_date = value;
       } else if (field === "end_date") {
-        if (next.start_date && value < next.start_date) {
+        if (next.start_date && value < next.start_date)
           next.end_date = next.start_date;
-        }
       }
 
       next.dirty = true;
@@ -292,7 +281,6 @@ export default function SchedulerPage() {
     if (idx === -1) return;
 
     const current = unitAssignments[idx];
-
     let suggestedStart: string;
 
     if (idx === 0) {
@@ -322,24 +310,31 @@ export default function SchedulerPage() {
     }));
   }
 
-  /* =========================================================
-     ✅ Duplicate schedule (uses centralized API helper)
-     ========================================================= */
+  /* ✅ Duplicate schedule */
   async function duplicateSchedule(
     sourceUnit: string,
     newUnits: string[],
     shift: number
   ) {
-    await duplicateScheduleApi({
-      source_unit_id: sourceUnit,
-      new_unit_ids: newUnits,
-      day_shift: shift,
+    const token = getToken();
+
+    const res = await fetch(`${API_BASE_URL}/schedule/duplicate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        source_unit_id: sourceUnit,
+        new_unit_ids: newUnits,
+        day_shift: shift,
+      }),
     });
+
+    if (!res.ok) throw new Error(await res.text());
+    await res.json();
   }
 
-  /* =========================================================
-     Save all
-     ========================================================= */
   async function handleSaveAll() {
     if (!assignments) return;
 
@@ -349,6 +344,7 @@ export default function SchedulerPage() {
     const dirtyEntries = Object.entries(editState).filter(
       ([, row]) => row.dirty
     );
+
     if (dirtyEntries.length === 0) {
       setMessage("No changes to save.");
       return;
@@ -388,7 +384,6 @@ export default function SchedulerPage() {
     }
   }
 
-  // Guards
   if (isLoading) return <div>Loading schedule…</div>;
   if (error)
     return (
@@ -549,11 +544,7 @@ export default function SchedulerPage() {
                               type="date"
                               value={row.end_date}
                               onChange={(e) =>
-                                handleFieldChange(
-                                  a,
-                                  "end_date",
-                                  e.target.value
-                                )
+                                handleFieldChange(a, "end_date", e.target.value)
                               }
                             />
                           </td>
