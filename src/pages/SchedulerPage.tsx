@@ -8,8 +8,8 @@ import {
   useTesterGroups,
 } from "../hooks";
 import type { Assignment, TestStep } from "../api";
+import { duplicateSchedule as duplicateScheduleApi } from "../api";
 import { usePrompt } from "../components/PromptProvider";
-
 
 /* =========================================================
    Types
@@ -37,7 +37,7 @@ type DuplicateModalProps = {
 };
 
 /* =========================================================
-   Helpers  (unchanged)
+   Helpers
    ========================================================= */
 function isoDateFromBackend(value?: string | null): string {
   if (!value) return "";
@@ -63,8 +63,7 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /* =========================================================
-   ✅ Duplicate Modal (MOVED OUTSIDE SchedulerPage)
-   This prevents remounting & focus loss while typing.
+   Duplicate Modal (outside page to prevent remount typing issues)
    ========================================================= */
 function DuplicateModal({
   source,
@@ -76,6 +75,7 @@ function DuplicateModal({
   onConfirm,
 }: DuplicateModalProps) {
   const prompt = usePrompt();
+
   const parsedNewUnits = duplicateUnitIdsText
     .split(/[\s,]+/)
     .map((s) => s.trim())
@@ -86,7 +86,6 @@ function DuplicateModal({
       <div className="modal">
         <h2>Duplicate Schedule</h2>
 
-        {/* aligned 3-input row */}
         <div className="dup-row">
           <div className="dup-field">
             <label className="dup-label">Source Unit:</label>
@@ -143,7 +142,7 @@ function DuplicateModal({
                 onClose();
               } catch (err: any) {
                 await prompt.alert(
-                  err.message || String(err),
+                  err?.message || String(err),
                   "Duplicate Failed"
                 );
               }
@@ -177,12 +176,12 @@ export default function SchedulerPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ✅ Duplicate schedule modal state
+  // Duplicate schedule modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateUnitIdsText, setDuplicateUnitIdsText] = useState("");
   const [duplicateShiftDays, setDuplicateShiftDays] = useState(1);
 
-  // NEW: which unit card is expanded (null = all collapsed)
+  // which unit card is expanded (null = all collapsed)
   const [openUnitId, setOpenUnitId] = useState<string | null>(null);
 
   // Reset edits when assignments refresh
@@ -219,26 +218,25 @@ export default function SchedulerPage() {
     return list;
   }, [assignments, stepsById]);
 
-    const testerOptions = useMemo(
-    () =>
-      [
-        // Group options: value is "group:<name>"
-        ...(testerGroups
-          ? Object.keys(testerGroups).map((groupName) => ({
-              value: `group:${groupName}`,
-              label: `${groupName} (group)`,
-            }))
-          : []),
-        // Individual tester options
-        ...(testers
-          ? testers.map((t) => ({
-              value: t,
-              label: t,
-            }))
-          : []),
-      ],
-    [testerGroups, testers]
-  );
+  const testerOptions = useMemo(() => {
+    const groupOpts =
+      testerGroups
+        ? Object.keys(testerGroups).map((groupName) => ({
+            value: `group:${groupName}`,
+            label: `${groupName} (group)`,
+          }))
+        : [];
+
+    const testerOpts =
+      testers
+        ? testers.map((t) => ({
+            value: t,
+            label: t,
+          }))
+        : [];
+
+    return [...groupOpts, ...testerOpts];
+  }, [testerGroups, testers]);
 
   function buildBaseRow(a: Assignment): RowState {
     return {
@@ -292,6 +290,7 @@ export default function SchedulerPage() {
 
     const idx = unitAssignments.findIndex((a) => a.step_id === stepId);
     if (idx === -1) return;
+
     const current = unitAssignments[idx];
 
     let suggestedStart: string;
@@ -324,39 +323,22 @@ export default function SchedulerPage() {
   }
 
   /* =========================================================
-     ✅ Duplicate schedule API call (supports multiple IDs)
+     ✅ Duplicate schedule (uses centralized API helper)
      ========================================================= */
   async function duplicateSchedule(
     sourceUnit: string,
     newUnits: string[],
     shift: number
   ) {
-    const token = localStorage.getItem("token");
-  
-    const res = await fetch(`${API_BASE_URL}/schedule/duplicate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        source_unit_id: sourceUnit,
-        new_unit_ids: newUnits,
-        day_shift: shift,
-      }),
+    await duplicateScheduleApi({
+      source_unit_id: sourceUnit,
+      new_unit_ids: newUnits,
+      day_shift: shift,
     });
-  
-    if (!res.ok) throw new Error(await res.text());
-    await res.json();
-  }
-  ;
-
-    if (!res.ok) throw new Error(await res.text());
-    await res.json();
   }
 
   /* =========================================================
-     Save all (unchanged)
+     Save all
      ========================================================= */
   async function handleSaveAll() {
     if (!assignments) return;
@@ -374,6 +356,7 @@ export default function SchedulerPage() {
 
     try {
       setSaving(true);
+
       for (const [assignmentId, row] of dirtyEntries) {
         const payload: {
           tester_id?: string | null;
@@ -399,13 +382,13 @@ export default function SchedulerPage() {
         return next;
       });
     } catch (err: any) {
-      setErrorMsg(err.message || String(err));
+      setErrorMsg(err?.message || String(err));
     } finally {
       setSaving(false);
     }
   }
 
-  // --- unchanged guards ---
+  // Guards
   if (isLoading) return <div>Loading schedule…</div>;
   if (error)
     return (
@@ -416,9 +399,6 @@ export default function SchedulerPage() {
   if (!assignments || assignments.length === 0)
     return <div>No assignments yet.</div>;
 
-  /* =========================================================
-     Render
-     ========================================================= */
   return (
     <div className="page">
       <header className="page-header">
@@ -457,7 +437,6 @@ export default function SchedulerPage() {
         </button>
       </header>
 
-      {/* ✅ modal render with props */}
       {showDuplicateModal && (
         <DuplicateModal
           source={openUnitId}
@@ -474,7 +453,6 @@ export default function SchedulerPage() {
         />
       )}
 
-      {/* --- unchanged banners --- */}
       {errorMsg && (
         <div className="banner banner--error" style={{ marginBottom: 8 }}>
           {errorMsg}
@@ -486,7 +464,6 @@ export default function SchedulerPage() {
         </div>
       )}
 
-      {/* --- unchanged unit cards/table --- */}
       {units.map(({ unit_id, rows }) => {
         const isOpen = openUnitId === unit_id;
 
@@ -537,11 +514,14 @@ export default function SchedulerPage() {
                               className="scheduler-field"
                               value={row.tester_id || ""}
                               onChange={(e) =>
-                                handleFieldChange(a, "tester_id", e.target.value)
+                                handleFieldChange(
+                                  a,
+                                  "tester_id",
+                                  e.target.value
+                                )
                               }
                             >
                               <option value="">(unassigned)</option>
-                            
                               {testerOptions.map((opt) => (
                                 <option key={opt.value} value={opt.value}>
                                   {opt.label}
@@ -582,11 +562,7 @@ export default function SchedulerPage() {
                               className="scheduler-field"
                               value={row.status}
                               onChange={(e) =>
-                                handleFieldChange(
-                                  a,
-                                  "status",
-                                  e.target.value
-                                )
+                                handleFieldChange(a, "status", e.target.value)
                               }
                             >
                               <option value="PENDING">PENDING</option>
@@ -618,12 +594,3 @@ export default function SchedulerPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
