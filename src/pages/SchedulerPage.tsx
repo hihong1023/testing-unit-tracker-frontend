@@ -331,17 +331,13 @@ export default function SchedulerPage() {
     newUnits: string[],
     shift: number
   ) {
+    const token = localStorage.getItem("token");
+  
     const res = await fetch(`${API_BASE_URL}/schedule/duplicate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        const token = localStorage.getItem("token");
-        
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         source_unit_id: sourceUnit,
@@ -349,6 +345,11 @@ export default function SchedulerPage() {
         day_shift: shift,
       }),
     });
+  
+    if (!res.ok) throw new Error(await res.text());
+    await res.json();
+  }
+  ;
 
     if (!res.ok) throw new Error(await res.text());
     await res.json();
@@ -617,6 +618,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
