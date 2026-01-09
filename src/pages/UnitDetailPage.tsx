@@ -5,9 +5,8 @@ import { useUnitDetails, useSteps } from "../hooks";
 import { getToken } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 import { useQueryClient } from "@tanstack/react-query";
+import { API_BASE_URL } from "../api";
 
-export const API_BASE =
-  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
@@ -91,7 +90,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${encodeURIComponent(data.unit.id)}/zip`,
+        `${API_BASE_URL}/reports/unit/${encodeURIComponent(data.unit.id)}/zip`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
@@ -117,7 +116,7 @@ export default function UnitDetailPage() {
   try {
     const token = getToken();
     const res = await fetch(
-      `${API_BASE}/reports/unit/${encodeURIComponent(data.unit.id)}/traveller.xlsx`,
+      `${API_BASE_URL}/reports/unit/${encodeURIComponent(data.unit.id)}/traveller.xlsx`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       }
@@ -147,7 +146,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${encodeURIComponent(
+        `${API_BASE_URL}/reports/unit/${encodeURIComponent(
           data.unit.id
         )}/step/${stepId}/zip`,
         {
@@ -185,7 +184,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/reports/unit/${encodeURIComponent(
+        `${API_BASE_URL}/reports/unit/${encodeURIComponent(
           data.unit.id
         )}/step/${stepId}/evidence`,
         {
@@ -235,7 +234,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/units/${encodeURIComponent(data.unit.id)}/rename`,
+        `${API_BASE_URL}/units/${encodeURIComponent(data.unit.id)}/rename`,
         {
           method: "PATCH",
           headers: {
@@ -289,7 +288,7 @@ export default function UnitDetailPage() {
     try {
       const token = getToken();
       const res = await fetch(
-        `${API_BASE}/assignments/${encodeURIComponent(assignmentId)}`,
+        `${API_BASE_URL}/assignments/${encodeURIComponent(assignmentId)}`,
         {
           method: "PATCH",
           headers: {
@@ -562,6 +561,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
