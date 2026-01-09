@@ -29,7 +29,11 @@ export default function UnitDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const { unitId } = useParams();
+  const params = useParams();
+  const unitId = params.unitId
+    ? decodeURIComponent(params.unitId)
+    : null;
+
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
 
@@ -256,9 +260,10 @@ export default function UnitDetailPage() {
       );
 
       // Navigate to new detail page so hooks refetch using new ID
-      navigate(`/units/${encodeURIComponent(trimmed)}/details`, {
+      navigate(`/units/${encodeURIComponent(trimmed)}`, {
         replace: true,
       });
+
     } catch (err: any) {
       prompt.alert(`Rename failed: ${err.message || err}`, "Rename Error");
     }
@@ -557,6 +562,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
