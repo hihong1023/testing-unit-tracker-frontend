@@ -1,6 +1,6 @@
 // src/hooks.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken, request } from "./api";;
+import { getToken, request } from "./api";
 import type { Assignment } from "./api";
 
 import {
@@ -15,12 +15,12 @@ import {
   updateAssignment,
   fetchTesters,
   getRole,
-  getTesterNotifications, // NEW
-  deleteUnit,             // moved up here
+  getTesterNotifications,
+  deleteUnit,
   fetchTesterGroups,
   setTesterAssignmentStatus,
 } from "./api";
-import type { Notification, TesterGroups } from "./api"; // NEW
+import type { Notification, TesterGroups } from "./api";
 
 // Polling intervals (ms)
 const UNITS_REFRESH_MS = 10000; // 10s
@@ -36,9 +36,13 @@ export function useUnits() {
 
 export function useUnitDetails(id: string) {
   return useQuery({
-    queryKey: ["unit", id],
-    queryFn: () => fetchUnitDetails(id),
+    queryKey: ["unit", id], // keep RAW id here (important for invalidateQueries)
     enabled: !!id,
+    queryFn: () => {
+      // ✅ Encode here so DA#532 becomes DA%23532 in the API call
+      const safeId = encodeURIComponent(id);
+      return fetchUnitDetails(safeId);
+    },
   });
 }
 
@@ -63,7 +67,7 @@ export function useTesterAssignments(testerId: string) {
     queryKey: ["testerAssignments", testerId],
     queryFn: () => fetchTesterAssignments(testerId),
     enabled: !!testerId,
-    refetchInterval: 10000, // auto-refresh
+    refetchInterval: 10000,
   });
 }
 
@@ -138,7 +142,6 @@ export function useRenameUnit() {
       });
     },
     onSuccess: () => {
-      // refresh units list
       queryClient.invalidateQueries({ queryKey: ["units"] });
     },
   });
@@ -155,7 +158,7 @@ export function useCreateResult() {
   });
 }
 
-// NEW: delete unit
+// delete unit
 export function useDeleteUnit() {
   const qc = useQueryClient();
   return useMutation({
@@ -166,7 +169,7 @@ export function useDeleteUnit() {
   });
 }
 
-// NEW: tester notifications (for "unit ready" alerts)
+// tester notifications
 export function useTesterNotifications(testerId: string | null) {
   return useQuery<Notification[]>({
     queryKey: ["testerNotifications", testerId],
@@ -175,7 +178,7 @@ export function useTesterNotifications(testerId: string | null) {
       return getTesterNotifications(testerId);
     },
     enabled: !!testerId,
-    refetchInterval: 5000, // poll every 5s for new ready notifications
+    refetchInterval: 5000,
   });
 }
 
@@ -191,7 +194,6 @@ export function useTesterSchedule(testerId: string) {
   });
 }
 
-
 export function useTesterSetStatus() {
   const qc = useQueryClient();
   return useMutation({
@@ -203,17 +205,10 @@ export function useTesterSetStatus() {
       status: "RUNNING" | "PENDING";
     }) => setTesterAssignmentStatus(assignmentId, status),
     onSuccess: () => {
-      // invalidate all tester-related views
       qc.invalidateQueries({ queryKey: ["testerAssignments"] });
       qc.invalidateQueries({ queryKey: ["testerQueue"] });
       qc.invalidateQueries({ queryKey: ["testerSchedule"] });
-      // also refresh scheduler matrix etc.
       qc.invalidateQueries({ queryKey: ["assignmentsSchedule"] });
     },
   });
 }
-
-
-
-
-
