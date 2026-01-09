@@ -2,11 +2,9 @@
 import { useState, FormEvent, useMemo } from "react";
 import { useUnits, useCreateUnit, useDeleteUnit, useRenameUnit } from "../hooks";
 import UnitCard from "../components/UnitCard";
-import { getRole, getToken } from "../api";
+import { getRole, getToken, API_BASE_URL } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
-const API_BASE =
-  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 type StatusFilter = "all" | "active" | "completed";
 type SortBy = "unit" | "progress";
@@ -70,14 +68,18 @@ export default function UnitsPage() {
 
   try {
     const token = getToken();
-    const res = await fetch(`${API_BASE}/reports/traveller/bulk.xlsx`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ unit_ids: selectedUnits }),
-    });
+    const res = await fetch(
+      `${API_BASE_URL}/reports/traveller/bulk.xlsx`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ unit_ids: selectedUnits }),
+      }
+    );
+
 
     if (!res.ok) {
       throw new Error(await res.text());
@@ -301,6 +303,7 @@ export default function UnitsPage() {
     </div>
   );
 }
+
 
 
 
