@@ -153,16 +153,19 @@ export async function request(path: string, options: RequestInit = {}) {
   const token = getToken();
 
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
     ...(options.headers || {}),
   };
 
+  // Only set JSON content-type when body is not FormData and body exists
+  const hasBody = !!options.body;
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (hasBody && !isFormData && !(headers as any)["Content-Type"]) {
+    (headers as any)["Content-Type"] = "application/json";
+  }
+
   if (token) (headers as any).Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (!res.ok) {
     const text = await res.text();
@@ -176,6 +179,7 @@ export async function request(path: string, options: RequestInit = {}) {
     return text as any;
   }
 }
+
 
 // ---------- Auth ----------
 
@@ -325,3 +329,4 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
+
