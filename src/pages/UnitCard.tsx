@@ -41,14 +41,11 @@ export default function UnitCard({ unit }: Props) {
       ? unit.next_step_name
       : "—";
 
-  // ✅ IMPORTANT: encode unit_id for URL safety
-  const encodedId = encodeURIComponent(unit.unit_id);
+  // ✅ IMPORTANT: encode unit_id for URLs (fixes #, spaces, etc.)
+  const unitPath = `/units/${encodeURIComponent(unit.unit_id)}`;
 
   return (
-    <Link
-      to={`/units/${encodedId}`}
-      className={`unit-tile unit-tile--${key}`}
-    >
+    <Link to={unitPath} className={`unit-tile unit-tile--${key}`}>
       <div className="unit-tile__id">{unit.unit_id}</div>
 
       <div className="unit-tile__body">
