@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
 
-  // Ensure treated as UTC then convert to SGT (+8)
+  // Treat backend timestamps as UTC and display SGT (+8)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
   const sgt = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
 
@@ -32,50 +32,43 @@ export default function UnitDetailPage() {
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
 
-  // Rename modal state
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
-  if (!unitId) {
+  if (!unitId)
     return (
       <div className="page">
         <p className="text-error">No unit selected.</p>
       </div>
     );
-  }
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="page">
         <p className="text-muted">Loading unit details…</p>
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <div className="page">
         <p className="text-error">Error: {(error as any).message}</p>
       </div>
     );
-  }
 
-  if (!data || !steps) {
+  if (!data || !steps)
     return (
       <div className="page">
         <p className="text-error">No data.</p>
       </div>
     );
-  }
 
-  // Lookup maps
   const assignmentsByStep = new Map<number, (typeof data.assignments)[number]>();
   data.assignments.forEach((a) => assignmentsByStep.set(a.step_id, a));
 
   const resultsByStep = new Map<number, (typeof data.results)[number]>();
   data.results.forEach((r) => resultsByStep.set(r.step_id, r));
 
-  // Progress: only count non-skipped
   const nonSkippedAssignments = data.assignments.filter((a: any) => !a.skipped);
   const nonSkippedStepIds = new Set(nonSkippedAssignments.map((a) => a.step_id));
 
@@ -93,9 +86,10 @@ export default function UnitDetailPage() {
       const token = getToken();
       const res = await fetch(
         `${API_BASE_URL}/reports/unit/${encodeURIComponent(data.unit.id)}/zip`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
@@ -119,9 +113,10 @@ export default function UnitDetailPage() {
         `${API_BASE_URL}/reports/unit/${encodeURIComponent(
           data.unit.id
         )}/traveller.xlsx`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
@@ -148,9 +143,10 @@ export default function UnitDetailPage() {
         `${API_BASE_URL}/reports/unit/${encodeURIComponent(
           data.unit.id
         )}/step/${stepId}/zip`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
@@ -189,12 +185,14 @@ export default function UnitDetailPage() {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
-      prompt.alert(`Failed to remove logs: ${err.message || err}`, "Remove Error");
+      prompt.alert(
+        `Failed to remove logs: ${err.message || err}`,
+        "Remove Error"
+      );
     }
   }
 
@@ -205,7 +203,6 @@ export default function UnitDetailPage() {
 
   async function handleConfirmRename() {
     const trimmed = (renameValue || "").trim();
-
     if (!trimmed || trimmed === unitLabel) {
       setIsRenameOpen(false);
       return;
@@ -231,16 +228,17 @@ export default function UnitDetailPage() {
           body: JSON.stringify({ new_unit_id: trimmed }),
         }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       await qc.invalidateQueries({ queryKey: ["units"] });
-
       setIsRenameOpen(false);
 
-      prompt.alert(`Unit ID has been renamed to "${trimmed}".`, "Rename Successful");
+      prompt.alert(
+        `Unit ID has been renamed to "${trimmed}".`,
+        "Rename Successful"
+      );
 
-      // Navigate to new detail page
+      // IMPORTANT: encode the new id in the URL (handles #, spaces, etc.)
       navigate(`/units/${encodeURIComponent(trimmed)}`, { replace: true });
     } catch (err: any) {
       prompt.alert(`Rename failed: ${err.message || err}`, "Rename Error");
@@ -277,12 +275,14 @@ export default function UnitDetailPage() {
           body: JSON.stringify({ skipped: makeSkipped }),
         }
       );
-
       if (!res.ok) throw new Error(await res.text());
 
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
-      prompt.alert(`Failed to update step: ${err.message || err}`, "Update Error");
+      prompt.alert(
+        `Failed to update step: ${err.message || err}`,
+        "Update Error"
+      );
     }
   }
 
@@ -298,12 +298,16 @@ export default function UnitDetailPage() {
           <div className="unit-detail-progress">
             <div className="unit-detail-progress-top">
               <span className="unit-detail-progress-label">Progress</span>
-              <span className="unit-detail-progress-value">{progress.toFixed(0)}%</span>
+              <span className="unit-detail-progress-value">
+                {progress.toFixed(0)}%
+              </span>
             </div>
             <div className="unit-detail-progress-bar">
               <div
                 className="unit-detail-progress-fill"
-                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                style={{
+                  width: `${Math.min(100, Math.max(0, progress))}%`,
+                }}
               />
             </div>
             <div className="unit-detail-progress-meta">
@@ -311,7 +315,9 @@ export default function UnitDetailPage() {
             </div>
           </div>
 
-          <span className="unit-detail-status-pill">{data.unit.status ?? "UNKNOWN"}</span>
+          <span className="unit-detail-status-pill">
+            {data.unit.status ?? "UNKNOWN"}
+          </span>
         </div>
       </header>
 
@@ -321,17 +327,25 @@ export default function UnitDetailPage() {
             <div className="unit-detail-meta-row">
               <span className="unit-detail-meta-label">Unit ID</span>
               <span className="unit-detail-meta-value">{unitLabel}</span>
-              <button type="button" className="btn btn-outline btn-xs" onClick={openRenameModal}>
+              <button
+                type="button"
+                className="btn btn-outline btn-xs"
+                onClick={openRenameModal}
+              >
                 Rename unit
               </button>
             </div>
             <div className="unit-detail-meta-row">
               <span className="unit-detail-meta-label">SKU</span>
-              <span className="unit-detail-meta-value">{data.unit.sku || "-"}</span>
+              <span className="unit-detail-meta-value">
+                {data.unit.sku || "-"}
+              </span>
             </div>
             <div className="unit-detail-meta-row">
               <span className="unit-detail-meta-label">LOT</span>
-              <span className="unit-detail-meta-value">{data.unit.lot || "-"}</span>
+              <span className="unit-detail-meta-value">
+                {data.unit.lot || "-"}
+              </span>
             </div>
           </div>
 
@@ -412,7 +426,6 @@ export default function UnitDetailPage() {
                       <td>{a?.tester_id || "-"}</td>
                       <td>
                         <div>{skipped ? "SKIPPED (N/A)" : a?.status || "-"}</div>
-
                         {!r && a && (
                           <button
                             type="button"
@@ -430,7 +443,9 @@ export default function UnitDetailPage() {
                       <td>{r ? formatSingaporeDateTime(r.finished_at) : "-"}</td>
                       <td>
                         {fileCount === 0 ? (
-                          <span className="unit-detail-evidence-empty">No files</span>
+                          <span className="unit-detail-evidence-empty">
+                            No files
+                          </span>
                         ) : (
                           <div className="unit-detail-evidence">
                             <span className="unit-detail-evidence-count">
@@ -469,7 +484,8 @@ export default function UnitDetailPage() {
             <div className="prompt-title">Rename unit</div>
             <div className="prompt-message">
               <p style={{ marginBottom: 8 }}>
-                Change the Unit ID. All assignments, results, and evidence will move to the new ID.
+                Change the Unit ID. All assignments, results, and evidence will
+                move to the new ID.
               </p>
               <input
                 type="text"
@@ -488,7 +504,11 @@ export default function UnitDetailPage() {
               >
                 Cancel
               </button>
-              <button className="btn btn-primary" type="button" onClick={handleConfirmRename}>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={handleConfirmRename}
+              >
                 Rename
               </button>
             </div>
