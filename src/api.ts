@@ -1,14 +1,5 @@
-console.log(
-  "VITE_API_BASE_URL at build:",
-  import.meta.env.VITE_API_BASE_URL
-);
-
-
-// src/api.ts
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:8000";
-console.log("Resolved API_BASE_URL:", API_BASE_URL);
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // ---------- Types & runtime exports ----------
 
@@ -337,6 +328,7 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
+
 
 
 
