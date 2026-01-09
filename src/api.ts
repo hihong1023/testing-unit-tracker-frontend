@@ -1,3 +1,5 @@
+// src/api.ts
+
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -86,11 +88,12 @@ export function setTesterAssignmentStatus(
   assignmentId: string,
   status: "RUNNING" | "PENDING"
 ): Promise<Assignment> {
-  return request(`/tester/assignments/${assignmentId}/status`, {
+  return request(`/tester/assignments/${encodeURIComponent(assignmentId)}/status`, {
     method: "POST",
     body: JSON.stringify({ status }),
   });
 }
+
 // ---------- Notifications ----------
 
 export interface Notification {
@@ -174,7 +177,6 @@ export async function request(path: string, options: RequestInit = {}) {
   }
 }
 
-
 // ---------- Auth ----------
 
 export async function login(name: string): Promise<LoginResponse> {
@@ -196,16 +198,14 @@ export function fetchUnitSummaries(): Promise<UnitSummary[]> {
 }
 
 export function fetchUnitDetails(id: string): Promise<UnitDetails> {
-  return request(`/units/${id}/details`);
+  return request(`/units/${encodeURIComponent(id)}/details`);
 }
 
 export function fetchSteps(): Promise<TestStep[]> {
   return request("/steps");
 }
 
-export function fetchTesterQueue(
-  testerId: string
-): Promise<TesterQueueResponse> {
+export function fetchTesterQueue(testerId: string): Promise<TesterQueueResponse> {
   const query = new URLSearchParams({ tester_id: testerId });
   return request(`/tester/queue?${query.toString()}`);
 }
@@ -218,9 +218,7 @@ export function fetchTesters(): Promise<string[]> {
   return request("/testers");
 }
 
-export function fetchTesterAssignments(
-  testerId: string
-): Promise<Assignment[]> {
+export function fetchTesterAssignments(testerId: string): Promise<Assignment[]> {
   const params = new URLSearchParams({ tester_id: testerId });
   return request(`/tester/assignments?${params.toString()}`);
 }
@@ -233,7 +231,7 @@ export interface AssignmentUpdate {
 }
 
 export function updateAssignment(id: string, data: AssignmentUpdate) {
-  return request(`/assignments/${id}`, {
+  return request(`/assignments/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -247,7 +245,7 @@ export function createUnit(unit_id: string) {
 }
 
 export function deleteUnit(unit_id: string) {
-  return request(`/units/${unit_id}`, {
+  return request(`/units/${encodeURIComponent(unit_id)}`, {
     method: "DELETE",
   });
 }
@@ -264,7 +262,6 @@ export function createResult(payload: {
     body: JSON.stringify(payload),
   });
 }
-
 
 // ---------- File upload (multipart) ----------
 
@@ -305,7 +302,7 @@ export function getTesterNotifications(
 }
 
 export function markNotificationRead(notifId: string): Promise<null> {
-  return request(`/tester/notifications/${notifId}/read`, {
+  return request(`/tester/notifications/${encodeURIComponent(notifId)}/read`, {
     method: "POST",
   });
 }
@@ -328,12 +325,3 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
-
-
-
-
-
-
-
-
-
