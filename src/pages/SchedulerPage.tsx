@@ -10,8 +10,6 @@ import {
 import type { Assignment, TestStep } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
-export const API_BASE =
-  "https://testing-unit-tracker-backend-cyfhe5cffve4cgbj.southeastasia-01.azurewebsites.net";
 
 /* =========================================================
    Types
@@ -333,11 +331,17 @@ export default function SchedulerPage() {
     newUnits: string[],
     shift: number
   ) {
-    const res = await fetch(`${API_BASE}/schedule/duplicate`, {
+    const res = await fetch(`${API_BASE_URL}/schedule/duplicate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        const token = localStorage.getItem("token");
+        
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+
       },
       body: JSON.stringify({
         source_unit_id: sourceUnit,
@@ -613,6 +617,7 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
 
 
 
