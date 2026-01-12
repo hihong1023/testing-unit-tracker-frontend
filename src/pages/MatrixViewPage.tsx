@@ -102,8 +102,17 @@ function MatrixTable({
       style={{
         width: "100%",
         maxWidth: "100vw",
-        overflowX: "auto",   // ✅ horizontal scroll only
-        overflowY: "hidden", // 🚫 prevent vertical scroll in header
+    
+        /* 🔑 FIX: limit height so scrollbar is reachable */
+        height: "calc(100vh - 230px)", 
+        /* adjust 230px if your header height changes */
+    
+        overflowX: "auto",
+        overflowY: "auto",
+    
+        borderRadius: 12,
+        border: "1px solid #e5e7eb",
+        background: "#ffffff",
       }}
     >
       <table
@@ -675,6 +684,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
