@@ -92,8 +92,7 @@ function MatrixTable({
   const headerFontSize = compact ? 10 : 12;
   const cellFontSize = compact ? 10 : 11;
 
-  // ✅ key idea: in normal view, columns must be wide enough (no overlap)
-  // fullscreen can be tighter
+  // Column sizing strategy
   const unitColW = compact ? 80 : 90;
   const stepColW = compact ? 78 : 150;
 
@@ -103,13 +102,16 @@ function MatrixTable({
         width: "100%",
         borderCollapse: "separate",
         borderSpacing: 0,
-        // ✅ normal view uses auto so columns respect widths; compact keeps fixed
+
+        // Normal view: allow table to grow wider than viewport
+        // Fullscreen: keep fixed so it fits screen
         tableLayout: compact ? "fixed" : "auto",
-        // ✅ ensure the table can be wider than viewport in normal mode (horizontal scroll container will handle it)
+
+        // This is the KEY that removes side gaps and forces true width
         minWidth: unitColW + steps.length * stepColW,
       }}
     >
-      {/* ✅ force predictable column widths */}
+      {/* ---------- column widths ---------- */}
       <colgroup>
         <col style={{ width: unitColW }} />
         {steps.map((s) => (
@@ -117,6 +119,7 @@ function MatrixTable({
         ))}
       </colgroup>
 
+      {/* ---------- header ---------- */}
       <thead>
         <tr>
           <th
@@ -125,10 +128,11 @@ function MatrixTable({
               left: 0,
               zIndex: 2,
               background: "#f9fafb",
-              padding: "8px 12px",
+              padding: "6px 10px",
               textAlign: "left",
               borderBottom: "1px solid #e5e7eb",
               fontSize: headerFontSize,
+              whiteSpace: "nowrap",
             }}
           >
             Unit
@@ -138,23 +142,19 @@ function MatrixTable({
             <th
               key={s.id}
               style={{
-                padding: "8px 8px",
+                padding: "6px 6px",
                 textAlign: "left",
                 borderBottom: "1px solid #e5e7eb",
                 fontSize: headerFontSize,
                 verticalAlign: "bottom",
               }}
-              title={`${s.order}. ${s.name}`} // ✅ hover tooltip shows full text
+              title={`${s.order}. ${s.name}`}
             >
-              {/* ✅ IMPORTANT: constrain header text so it never overlaps */}
               <div
                 style={{
-                  display: "block",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  // compact: single line with ellipsis
                   whiteSpace: compact ? "nowrap" : "normal",
-                  // normal: allow wrapping BUT keep it inside the cell
                   overflowWrap: "anywhere",
                   wordBreak: "break-word",
                   lineHeight: 1.15,
@@ -168,6 +168,7 @@ function MatrixTable({
         </tr>
       </thead>
 
+      {/* ---------- body ---------- */}
       <tbody>
         {rows.map((row) => (
           <tr key={row.unitId}>
@@ -177,13 +178,13 @@ function MatrixTable({
                 left: 0,
                 zIndex: 1,
                 background: "#f9fafb",
-                padding: "8px 12px",
+                padding: "6px 10px",
                 borderTop: "1px solid #e5e7eb",
                 fontWeight: 600,
                 fontSize: cellFontSize,
+                whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
               title={row.unitId}
             >
@@ -199,29 +200,31 @@ function MatrixTable({
                 <td
                   key={step.id}
                   style={{
-                    padding: compact ? 4 : 6,
+                    padding: compact ? 3 : 4,
                     borderTop: "1px solid #e5e7eb",
                     verticalAlign: "top",
                   }}
                 >
                   <div
                     style={{
-                      borderRadius: 8,
+                      borderRadius: 6,
                       border: `1px solid ${border}`,
                       background: bg,
-                      padding: compact ? "3px 4px" : "4px 6px",
-                      minHeight: compact ? 44 : 52,
+                      padding: "2px 4px",
+
+                      // 🔑 This removes vertical bloat
+                      minHeight: compact ? 32 : 36,
+
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
-                      overflow: "hidden", // ✅ prevent any inner overflow looking messy
+                      overflow: "hidden",
                     }}
                   >
                     <div
                       style={{
                         fontSize: cellFontSize,
                         fontWeight: 600,
-                        color: "#111827",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -235,7 +238,6 @@ function MatrixTable({
                       style={{
                         fontSize: cellFontSize,
                         color: "#374151",
-                        marginTop: 1,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -247,7 +249,6 @@ function MatrixTable({
 
                     <div
                       style={{
-                        marginTop: 2,
                         fontSize: cellFontSize,
                         fontWeight: 700,
                         textTransform: "uppercase",
@@ -637,4 +638,5 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
