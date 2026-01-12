@@ -143,13 +143,46 @@ function MatrixTable({
               key={s.id}
               style={{
                 padding: "6px 6px",
-                textAlign: "left",
                 borderBottom: "1px solid #e5e7eb",
+            
+                /* 🔒 FIXED HEADER CELL */
+                height: compact ? 52 : 64,
+                minHeight: compact ? 52 : 64,
+                maxHeight: compact ? 52 : 64,
+            
+                verticalAlign: "middle",
                 fontSize: headerFontSize,
-                verticalAlign: "bottom",
               }}
               title={`${s.order}. ${s.name}`}
             >
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",     // ✅ vertical center
+                  justifyContent: "flex-start",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+            
+                    /* wrapping rules */
+                    whiteSpace: compact ? "nowrap" : "normal",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+            
+                    lineHeight: 1.15,
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
+                  <span>{s.name}</span>
+                </div>
+              </div>
+            </th>
+
               <div
                 style={{
                   overflow: "hidden",
@@ -638,5 +671,6 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
