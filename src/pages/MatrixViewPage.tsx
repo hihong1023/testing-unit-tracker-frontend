@@ -68,7 +68,6 @@ function displayTester(tester?: string | null): string {
 }
 
 /* ---------- reusable table renderer ---------- */
-
 function MatrixTable({
   rows,
   steps,
@@ -88,10 +87,15 @@ function MatrixTable({
     >;
   }[];
   steps: TestStep[];
-  compact?: boolean;
+  compact?: boolean; // true in fullscreen
 }) {
-  const headerFontSize = compact ? 11 : 12;
+  const headerFontSize = compact ? 10 : 12;
   const cellFontSize = compact ? 10 : 11;
+
+  // ✅ key idea: in normal view, columns must be wide enough (no overlap)
+  // fullscreen can be tighter
+  const unitColW = compact ? 80 : 90;
+  const stepColW = compact ? 78 : 150;
 
   return (
     <table
@@ -99,9 +103,20 @@ function MatrixTable({
         width: "100%",
         borderCollapse: "separate",
         borderSpacing: 0,
-        tableLayout: "fixed",
+        // ✅ normal view uses auto so columns respect widths; compact keeps fixed
+        tableLayout: compact ? "fixed" : "auto",
+        // ✅ ensure the table can be wider than viewport in normal mode (horizontal scroll container will handle it)
+        minWidth: unitColW + steps.length * stepColW,
       }}
     >
+      {/* ✅ force predictable column widths */}
+      <colgroup>
+        <col style={{ width: unitColW }} />
+        {steps.map((s) => (
+          <col key={s.id} style={{ width: stepColW }} />
+        ))}
+      </colgroup>
+
       <thead>
         <tr>
           <th
@@ -113,7 +128,6 @@ function MatrixTable({
               padding: "8px 12px",
               textAlign: "left",
               borderBottom: "1px solid #e5e7eb",
-              minWidth: 70,
               fontSize: headerFontSize,
             }}
           >
@@ -127,12 +141,28 @@ function MatrixTable({
                 padding: "8px 8px",
                 textAlign: "left",
                 borderBottom: "1px solid #e5e7eb",
-                whiteSpace: "normal",
                 fontSize: headerFontSize,
+                verticalAlign: "bottom",
               }}
+              title={`${s.order}. ${s.name}`} // ✅ hover tooltip shows full text
             >
-              <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
-              <span>{s.name}</span>
+              {/* ✅ IMPORTANT: constrain header text so it never overlaps */}
+              <div
+                style={{
+                  display: "block",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  // compact: single line with ellipsis
+                  whiteSpace: compact ? "nowrap" : "normal",
+                  // normal: allow wrapping BUT keep it inside the cell
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
+                  lineHeight: 1.15,
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
+                <span>{s.name}</span>
+              </div>
             </th>
           ))}
         </tr>
@@ -151,7 +181,11 @@ function MatrixTable({
                 borderTop: "1px solid #e5e7eb",
                 fontWeight: 600,
                 fontSize: cellFontSize,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
+              title={row.unitId}
             >
               {row.unitId}
             </td>
@@ -173,13 +207,14 @@ function MatrixTable({
                   <div
                     style={{
                       borderRadius: 8,
-                      border: `1px solid ${border}`, // ✅ FIXED
+                      border: `1px solid ${border}`,
                       background: bg,
                       padding: compact ? "3px 4px" : "4px 6px",
                       minHeight: compact ? 44 : 52,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
+                      overflow: "hidden", // ✅ prevent any inner overflow looking messy
                     }}
                   >
                     <div
@@ -187,7 +222,11 @@ function MatrixTable({
                         fontSize: cellFontSize,
                         fontWeight: 600,
                         color: "#111827",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
+                      title={displayTester(cell.tester) || "-"}
                     >
                       {displayTester(cell.tester) || "-"}
                     </div>
@@ -197,7 +236,11 @@ function MatrixTable({
                         fontSize: cellFontSize,
                         color: "#374151",
                         marginTop: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
+                      title={cell.date || "-"}
                     >
                       {cell.date || "-"}
                     </div>
@@ -234,6 +277,7 @@ function MatrixTable({
     </table>
   );
 }
+
 
 /* ---------- main page ---------- */
 
@@ -593,3 +637,4 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
