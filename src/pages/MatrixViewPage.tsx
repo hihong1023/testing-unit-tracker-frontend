@@ -459,8 +459,27 @@ export default function MatrixViewPage() {
   const hasAnyRows = filteredRows.length > 0;
 
   return (
-    <div className="page">
-      <header className="page-header">
+    <div
+      className="page"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        padding: 0,        // 🔴 important
+        maxWidth: "100%",  // 🔴 important
+      }}
+    >
+      <header
+        className="page-header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: "#ffffff",
+          borderBottom: "1px solid #e5e7eb",
+        }}
+      >
+
         <div className="page-header__title-group">
           <h1>Matrix View</h1>
           <p>
@@ -515,31 +534,6 @@ export default function MatrixViewPage() {
         </p>
       )}
 
-      {hasAnyRows && stepsOrdered.length > 0 && (
-        <section
-          className="card"
-          style={{
-            marginTop: 8,
-            padding: 8,
-          }}
-        >
-          <div
-            style={{
-              borderRadius: 10,
-              border: "1px solid #e5e7eb",
-              background: "#ffffff",
-              overflowX: "auto",
-            }}
-          >
-            {/* normal view: use filteredRows (respect hide-completed toggle) */}
-            <MatrixTable
-              rows={filteredRows}
-              steps={stepsOrdered}
-              compact={false}
-            />
-          </div>
-        </section>
-      )}
 
       {/* ---------- fullscreen overlay ---------- */}
       {isFullscreen && hasAnyRows && stepsOrdered.length > 0 && (
@@ -612,6 +606,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
