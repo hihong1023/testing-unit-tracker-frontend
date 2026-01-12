@@ -104,7 +104,7 @@ function MatrixTable({
         maxWidth: "100vw",
     
         /* 🔑 FIX: limit height so scrollbar is reachable */
-        height: "calc(100vh - 250px)", 
+        height: "calc(100vh - 200px)", 
         /* adjust 230px if your header height changes */
     
         overflowX: "auto",
@@ -684,6 +684,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
