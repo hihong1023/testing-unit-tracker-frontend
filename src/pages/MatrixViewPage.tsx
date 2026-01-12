@@ -11,21 +11,12 @@ import {
 
 /* ---------- helpers ---------- */
 
-function formatDateFromISO(value?: string | null): string {
-  if (!value) return "-";
-  return value.slice(0, 10); // "YYYY-MM-DD"
-}
-
 function toISODate(value: any): string | null {
   if (!value) return null;
-  if (typeof value === "string") {
-    return value.slice(0, 10); // assume ISO-like
-  }
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
   try {
-    return new Date(value).toISOString().slice(0, 10);
+    return typeof value === "string"
+      ? value.slice(0, 10)
+      : new Date(value).toISOString().slice(0, 10);
   } catch {
     return null;
   }
@@ -39,34 +30,48 @@ type CellStatusKind =
   | "OVERDUE"
   | "SKIPPED";
 
-function cellBackground(kind: CellStatusKind, passed?: boolean): string {
-  if (kind === "PASS") return "#34d870ff";
-  if (kind === "FAIL") return "#f08d8dff";
-  if (kind === "RUNNING") return "#cef010ff";
-  if (kind === "OVERDUE") return "#d6b910ff"; // overdue colour
-  if (kind === "SKIPPED") return "#e5e7eb"; // neutral grey
-  return "#e5e7eb";
+function cellBackground(kind: CellStatusKind): string {
+  switch (kind) {
+    case "PASS":
+      return "#bbf7d0";
+    case "FAIL":
+      return "#fecaca";
+    case "RUNNING":
+      return "#fef08a";
+    case "OVERDUE":
+      return "#fed7aa";
+    case "SKIPPED":
+      return "#e5e7eb";
+    default:
+      return "#f3f4f6";
+  }
 }
 
-function cellBorderColor(kind: CellStatusKind, passed?: boolean): string {
-  if (kind === "PASS") return "#16a34a";
-  if (kind === "FAIL") return "#ef4444";
-  if (kind === "RUNNING") return "#6b5838ff";
-  if (kind === "OVERDUE") return "#cc7000"; // overdue border
-  if (kind === "SKIPPED") return "#d1d5db"; // soft grey
-  return "#d1d5db";
+function cellBorderColor(kind: CellStatusKind): string {
+  switch (kind) {
+    case "PASS":
+      return "#16a34a";
+    case "FAIL":
+      return "#dc2626";
+    case "RUNNING":
+      return "#ca8a04";
+    case "OVERDUE":
+      return "#c2410c";
+    case "SKIPPED":
+      return "#9ca3af";
+    default:
+      return "#d1d5db";
+  }
 }
 
 function displayTester(tester?: string | null): string {
-  if (!tester) return "";
-  if (tester.startsWith("group:")) {
-    return tester.slice("group:".length); // "group:Physical Layer" -> "Physical Layer"
-  }
-  return tester;
+  if (!tester) return "-";
+  return tester.startsWith("group:")
+    ? tester.slice("group:".length)
+    : tester;
 }
 
-/* ---------- reusable table renderer ---------- */
-
+/* ---------- Matrix Table ---------- */
 
 function MatrixTable({
   rows,
@@ -82,23 +87,22 @@ function MatrixTable({
         date: string | null;
         statusLabel: string;
         statusKind: CellStatusKind;
-        passed?: boolean;
       }
     >;
   }[];
   steps: TestStep[];
-  compact?: boolean; // true in fullscreen
+  compact?: boolean;
 }) {
-  const headerFontSize = compact ? 11 : 12;
-  const cellFontSize = compact ? 10 : 11;
+  const headerFont = compact ? 11 : 12;
+  const cellFont = compact ? 10 : 11;
 
   return (
     <table
       style={{
         width: "100%",
+        tableLayout: "fixed",
         borderCollapse: "separate",
         borderSpacing: 0,
-        tableLayout: "fixed", // force all columns to fit, no horizontal scroll in fullscreen
       }}
     >
       <thead>
@@ -109,11 +113,10 @@ function MatrixTable({
               left: 0,
               zIndex: 2,
               background: "#f9fafb",
-              padding: "8px 12px",
-              textAlign: "left",
+              padding: 8,
               borderBottom: "1px solid #e5e7eb",
-              minWidth: 70,
-              fontSize: headerFontSize,
+              fontSize: headerFont,
+              minWidth: 80,
             }}
           >
             Unit
@@ -122,19 +125,17 @@ function MatrixTable({
             <th
               key={s.id}
               style={{
-                padding: "8px 8px",
-                textAlign: "left",
+                padding: 8,
                 borderBottom: "1px solid #e5e7eb",
-                whiteSpace: "normal",
-                fontSize: headerFontSize,
+                fontSize: headerFont,
               }}
             >
-              <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
-              <span>{s.name}</span>
+              {s.order}. {s.name}
             </th>
           ))}
         </tr>
       </thead>
+
       <tbody>
         {rows.map((row) => (
           <tr key={row.unitId}>
@@ -144,79 +145,45 @@ function MatrixTable({
                 left: 0,
                 zIndex: 1,
                 background: "#f9fafb",
-                padding: "8px 12px",
+                padding: 8,
                 borderTop: "1px solid #e5e7eb",
                 fontWeight: 600,
-                fontSize: cellFontSize,
+                fontSize: cellFont,
               }}
             >
               {row.unitId}
             </td>
+
             {steps.map((step) => {
               const cell = row.cells[step.id];
-
-              const bg = cellBackground(cell.statusKind, cell.passed);
-              const border = cellBorderColor(cell.statusKind, cell.passed);
-
               return (
                 <td
                   key={step.id}
                   style={{
                     padding: compact ? 4 : 6,
                     borderTop: "1px solid #e5e7eb",
-                    verticalAlign: "top",
                   }}
                 >
                   <div
                     style={{
                       borderRadius: 8,
-                      border: `1px solid ${border}`,
-                      background: bg,
+                      border: `1px solid ${cellBorderColor(
+                        cell.statusKind
+                      )}`,
+                      background: cellBackground(cell.statusKind),
                       padding: compact ? "3px 4px" : "4px 6px",
-                      minHeight: compact ? 44 : 52,
+                      minHeight: compact ? 42 : 50,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
+                      fontSize: cellFont,
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: cellFontSize,
-                        fontWeight: 600,
-                        color: "#111827",
-                      }}
-                    >
-                      {displayTester(cell.tester) || "-"}
+                    <div style={{ fontWeight: 600 }}>
+                      {displayTester(cell.tester)}
                     </div>
-                    <div
-                      style={{
-                        fontSize: cellFontSize,
-                        color: "#374151",
-                        marginTop: 1,
-                      }}
-                    >
-                      {cell.date || "-"}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 2,
-                        fontSize: cellFontSize,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        color:
-                          cell.statusKind === "SKIPPED"
-                            ? "#6b7280" // grey text for N/A
-                            : cell.passed === true
-                            ? "#166534"
-                            : cell.passed === false
-                            ? "#b91c1c"
-                            : cell.statusKind === "RUNNING"
-                            ? "#854d0e"
-                            : cell.statusKind === "OVERDUE"
-                            ? "#92400e"
-                            : "#4b5563",
-                      }}
-                    >
+                    <div>{cell.date || "-"}</div>
+                    <div style={{ fontWeight: 700 }}>
                       {cell.statusLabel}
                     </div>
                   </div>
@@ -230,233 +197,104 @@ function MatrixTable({
   );
 }
 
-/* ---------- main page ---------- */
+/* ---------- Page ---------- */
 
 export default function MatrixViewPage() {
-  const { data: units, isLoading: unitsLoading, error: unitsError } = useUnits();
-  const { data: steps, isLoading: stepsLoading, error: stepsError } = useSteps();
+  const { data: units } = useUnits();
+  const { data: steps } = useSteps();
 
-  // Fullscreen + auto-paging
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [page, setPage] = useState(0);
-
-  // Hide completed toggle
   const [hideCompleted, setHideCompleted] = useState(true);
 
-  // fetch all unit details in one go for the matrix
   const unitIds = useMemo(
     () => (units ?? []).map((u) => u.unit_id),
     [units]
   );
 
-  // unit_id -> status lookup (for filtering)
-  const unitStatusMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    (units ?? []).forEach((u) => {
-      m[u.unit_id] = u.status;
-    });
-    return m;
-  }, [units]);
-
-  const {
-    data: detailsList,
-    isLoading: detailsLoading,
-    error: detailsError,
-  } = useQuery({
+  const { data: detailsList } = useQuery({
     queryKey: ["matrixDetails", unitIds],
     enabled: unitIds.length > 0,
-    queryFn: async (): Promise<UnitDetails[]> => {
+    queryFn: async () => {
       const list: UnitDetails[] = [];
       for (const id of unitIds) {
-        const d = await fetchUnitDetails(id);
-        list.push(d);
+        list.push(await fetchUnitDetails(id));
       }
       return list;
     },
   });
 
-  const stepsOrdered: TestStep[] = useMemo(
+  const stepsOrdered = useMemo(
     () => (steps ?? []).slice().sort((a, b) => a.order - b.order),
     [steps]
   );
 
   const rows = useMemo(() => {
-    if (!units || !detailsList || stepsOrdered.length === 0) return [];
+    if (!units || !detailsList) return [];
+    const today = new Date().toISOString().slice(0, 10);
 
-    // today's date in YYYY-MM-DD
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const map = new Map(detailsList.map((d) => [d.unit.id, d]));
 
-    const detailsByUnit = new Map<string, UnitDetails>();
-    for (const d of detailsList) {
-      detailsByUnit.set(d.unit.id, d);
-    }
-
-    return units.map((u: UnitSummary) => {
-      const d = detailsByUnit.get(u.unit_id);
-      const cells: Record<
-        number,
-        {
-          tester: string | null;
-          date: string | null;
-          statusLabel: string;
-          statusKind: CellStatusKind;
-          passed?: boolean;
-        }
-      > = {};
-
-      if (d) {
-        const assignByStep = new Map<number, UnitDetails["assignments"][number]>();
-        for (const a of d.assignments) assignByStep.set(a.step_id, a);
-
-        const resultByStep = new Map<number, UnitDetails["results"][number]>();
-        for (const r of d.results) resultByStep.set(r.step_id, r);
+    return units
+      .filter((u) => !(hideCompleted && u.status === "COMPLETED"))
+      .map((u) => {
+        const d = map.get(u.unit_id);
+        const cells: any = {};
 
         for (const step of stepsOrdered) {
-          const a = (assignByStep.get(step.id) as any) || null;
-          const r = resultByStep.get(step.id) || null;
-          const tester = a?.tester_id ?? null;
-          const skipped = !!a?.skipped;
-          
-          // ----- date: scheduler overrides result -----
-          // 1) Prefer scheduler’s schedule dates (end_at, then start_at)
-          // 2) Only if no schedule date, fall back to result.finished_at
-          let date: string | null = null;
-          
-          if (!skipped && a) {
-            const schedISO = toISODate(a.end_at ?? a.start_at); // end > start
-            if (schedISO) {
-              date = schedISO;
-            }
-          }
-          
-        
-          let statusLabel = "PENDING";
-          let statusKind: CellStatusKind = "PENDING";
-          let passed: boolean | undefined = undefined;
-        
-          if (!a) {
-            // no assignment row yet => keep PENDING
-          } else if (skipped) {
-            statusKind = "SKIPPED";
-            statusLabel = "N/A";
-          } else {
-            // 🔹 main truth: assignment.status
-            const raw = (a.status || "").toString().toUpperCase();
-        
-            if (raw === "PASS" || raw === "FAIL") {
-              statusKind = raw as CellStatusKind;
-              statusLabel = raw;
-              passed = raw === "PASS";
-            } else if (raw === "RUNNING") {
-              statusKind = "RUNNING";
-              statusLabel = "RUNNING";
-            } else {
-              // PENDING / DONE / empty → derive from dates
-              let startStr: string | null = null;
-        
-              if (typeof a.start_at === "string") {
-                startStr = a.start_at.slice(0, 10);
-              } else if (a.start_at instanceof Date) {
-                startStr = a.start_at.toISOString().slice(0, 10);
-              } else if (a.start_at) {
-                try {
-                  // @ts-ignore
-                  startStr = new Date(a.start_at).toISOString().slice(0, 10);
-                } catch {
-                  startStr = null;
-                }
-              }
-        
-              if (startStr) {
-                if (startStr < todayKey) {
-                  statusKind = "OVERDUE";
-                  statusLabel = "OVERDUE";
-                } else if (startStr === todayKey) {
-                  statusKind = "RUNNING";
-                  statusLabel = "RUNNING";
-                } else {
-                  statusKind = "PENDING";
-                  statusLabel = "PENDING";
-                }
-              } else {
-                statusKind = "PENDING";
-                statusLabel = "PENDING";
-              }
-        
-              // 🔹 fallback for legacy data:
-              // if schedule has no explicit PASS/FAIL but Result exists, use Result
-              if (!raw && r) {
-                statusKind = r.passed ? "PASS" : "FAIL";
-                statusLabel = r.passed ? "PASS" : "FAIL";
-                passed = r.passed;
-              }
-            }
-          }
-        
-          cells[step.id] = { tester, date, statusLabel, statusKind, passed };
-        }
+          const a = d?.assignments.find((x) => x.step_id === step.id);
+          const r = d?.results.find((x) => x.step_id === step.id);
 
-      } else {
-        // no details yet -> everything pending
-        for (const step of stepsOrdered) {
+          let status: CellStatusKind = "PENDING";
+          let label = "PENDING";
+
+          if (a?.skipped) {
+            status = "SKIPPED";
+            label = "N/A";
+          } else if (a?.status === "PASS" || a?.status === "FAIL") {
+            status = a.status;
+            label = a.status;
+          } else if (a?.start_at) {
+            const start = a.start_at.slice(0, 10);
+            if (start < today) {
+              status = "OVERDUE";
+              label = "OVERDUE";
+            } else if (start === today) {
+              status = "RUNNING";
+              label = "RUNNING";
+            }
+          }
+
           cells[step.id] = {
-            tester: null,
-            date: null,
-            statusLabel: "PENDING",
-            statusKind: "PENDING",
+            tester: a?.tester_id ?? null,
+            date: toISODate(a?.end_at ?? a?.start_at ?? r?.finished_at),
+            statusKind: status,
+            statusLabel: label,
           };
         }
-      }
 
-      return { unitId: u.unit_id, cells };
-    });
-  }, [units, detailsList, stepsOrdered]);
+        return { unitId: u.unit_id, cells };
+      });
+  }, [units, detailsList, stepsOrdered, hideCompleted]);
 
-  const anyLoading = unitsLoading || stepsLoading || detailsLoading;
+  /* ---------- paging ---------- */
 
-  // ===== filter out completed units when toggle is ON =====
-  const filteredRows = useMemo(() => {
-    if (rows.length === 0) return [];
-    return rows.filter((row) => {
-      const status = unitStatusMap[row.unitId]; // "COMPLETED" / "IN_PROGRESS" / etc.
-      if (!status) return true;
-      if (hideCompleted && status === "COMPLETED") return false;
-      return true;
-    });
-  }, [rows, unitStatusMap, hideCompleted]);
+  const rowsPerPage = 12;
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+  const visibleRows = isFullscreen
+    ? rows.slice(page * rowsPerPage, (page + 1) * rowsPerPage)
+    : rows;
 
-  /* ----- paging for fullscreen mode ----- */
-
-  const rowsPerPage = 12; // show 12 units at a time in fullscreen
-  const totalPages =
-    filteredRows.length === 0
-      ? 1
-      : Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-
-  const visibleRows = useMemo(() => {
-    if (!isFullscreen) return filteredRows;
-    if (filteredRows.length === 0) return filteredRows;
-    const start = page * rowsPerPage;
-    return filteredRows.slice(start, start + rowsPerPage);
-  }, [filteredRows, isFullscreen, page]);
-
-  // auto-advance pages when fullscreen
   useEffect(() => {
     if (!isFullscreen || totalPages <= 1) return;
-    const id = setInterval(() => {
-      setPage((p) => (p + 1) % totalPages);
-    }, 15000); // change every 15s
+    const id = setInterval(
+      () => setPage((p) => (p + 1) % totalPages),
+      15000
+    );
     return () => clearInterval(id);
   }, [isFullscreen, totalPages]);
 
-  // reset to first page when enter fullscreen or rows change
-  useEffect(() => {
-    if (isFullscreen) setPage(0);
-  }, [isFullscreen, filteredRows.length]);
-
   /* ---------- render ---------- */
-
-  const hasAnyRows = filteredRows.length > 0;
 
   return (
     <div
@@ -465,8 +303,9 @@ export default function MatrixViewPage() {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        padding: 0,        // 🔴 important
-        maxWidth: "100%",  // 🔴 important
+        maxWidth: "100%",
+        padding: 0,
+        overflow: "hidden", // ⭐ FIX
       }}
     >
       <header
@@ -477,137 +316,72 @@ export default function MatrixViewPage() {
           zIndex: 5,
           background: "#ffffff",
           borderBottom: "1px solid #e5e7eb",
+          padding: "12px 16px",
         }}
       >
-
-        <div className="page-header__title-group">
-          <h1>Matrix View</h1>
-          <p>
-            Full-screen overview of all units vs all test steps. Cells show{" "}
-            <strong>tester</strong>, <strong>date</strong> and{" "}
-            <strong>result</strong>. Skipped steps are marked as{" "}
-            <strong>N/A</strong>.
-          </p>
+        <h1>Matrix View</h1>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setHideCompleted((v) => !v)}>
+            {hideCompleted ? "Show completed" : "Hide completed"}
+          </button>
+          <button onClick={() => setIsFullscreen(true)}>
+            Full screen
+          </button>
         </div>
-
-        {rows.length > 0 && (
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => setHideCompleted((v) => !v)}
-            >
-              {hideCompleted ? "Show completed units" : "Hide completed units"}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => setIsFullscreen(true)}
-            >
-              Full screen
-            </button>
-          </div>
-        )}
       </header>
 
-      {anyLoading && <div>Loading matrix…</div>}
-      {unitsError && (
-        <div className="banner banner--error">
-          Error loading units: {(unitsError as any).message}
+      {/* ⭐ FIX: matrix fills remaining height */}
+      <section
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            overflow: "auto", // ⭐ FIX: vertical + horizontal scroll
+            background: "#ffffff",
+          }}
+        >
+          <MatrixTable rows={visibleRows} steps={stepsOrdered} />
         </div>
-      )}
-      {stepsError && (
-        <div className="banner banner--error">
-          Error loading steps: {(stepsError as any).message}
-        </div>
-      )}
-      {detailsError && (
-        <div className="banner banner--error">
-          Error loading details: {(detailsError as any).message}
-        </div>
-      )}
+      </section>
 
-      {!anyLoading && !hasAnyRows && (
-        <p className="text-muted" style={{ marginTop: 8 }}>
-          {hideCompleted
-            ? "No active units to show (all completed or filtered)."
-            : "No units to show yet."}
-        </p>
-      )}
-
-
-      {/* ---------- fullscreen overlay ---------- */}
-      {isFullscreen && hasAnyRows && stepsOrdered.length > 0 && (
+      {/* ---------- fullscreen ---------- */}
+      {isFullscreen && (
         <div
           style={{
             position: "fixed",
             inset: 0,
+            background: "#020617",
             zIndex: 999,
-            background: "#00008B",
             display: "flex",
             flexDirection: "column",
-            padding: "16px 20px",
+            padding: 12,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              color: "#e5e7eb",
-              marginBottom: 8,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>Matrix View</div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>
-                Full-screen mode. Pages auto-change every 15s if there are many
-                units.
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {totalPages > 1 && (
-                <div style={{ fontSize: 12 }}>
-                  Page <strong>{page + 1}</strong> / {totalPages}
-                </div>
-              )}
-              <button
-                className="btn btn-secondary"
-                onClick={() => setIsFullscreen(false)}
-              >
-                Exit full screen
-              </button>
-            </div>
+          <div style={{ color: "#e5e7eb", marginBottom: 8 }}>
+            Page {page + 1} / {totalPages}
+            <button
+              style={{ marginLeft: 12 }}
+              onClick={() => setIsFullscreen(false)}
+            >
+              Exit
+            </button>
           </div>
 
-          <div
-            style={{
-              flex: 1,
-              borderRadius: 12,
-              background: "#ffffff",
-              padding: 8,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden", // no scrollbars; paging handles large sets
-              height: "100%",
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                overflow: "hidden",
-              }}
-            >
-              {/* fullscreen: compact table, forced to fit width, only subset of rows */}
-              <MatrixTable rows={visibleRows} steps={stepsOrdered} compact />
-            </div>
+          <div style={{ flex: 1, overflow: "hidden", background: "#fff" }}>
+            <MatrixTable
+              rows={visibleRows}
+              steps={stepsOrdered}
+              compact
+            />
           </div>
         </div>
       )}
     </div>
   );
 }
-
-
-
-
-
