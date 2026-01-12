@@ -92,31 +92,30 @@ function MatrixTable({
   const headerFontSize = compact ? 10 : 12;
   const cellFontSize = compact ? 10 : 11;
 
-  // column widths
-  const unitColW = compact ? 80 : 100;
-  const stepColW = compact ? 80 : 160;
-
-  // fixed header height → keeps all test names aligned
+  // 🔒 fixed dimensions
   const headerH = compact ? 52 : 64;
+  const unitColW = compact ? 80 : 90;
+  const stepColW = compact ? 90 : 150;
 
   return (
     <div
       style={{
         width: "100%",
         maxWidth: "100vw",
-        overflowX: "auto",     // ✅ horizontal scroll always visible
-        overflowY: "hidden",   // ✅ no vertical scrollbar here
+        overflowX: "auto",   // ✅ horizontal scroll only
+        overflowY: "hidden", // 🚫 prevent vertical scroll in header
       }}
     >
       <table
         style={{
+          width: "100%",
+          minWidth: unitColW + steps.length * stepColW,
           borderCollapse: "separate",
           borderSpacing: 0,
           tableLayout: compact ? "fixed" : "auto",
-          minWidth: unitColW + steps.length * stepColW, // allow table to grow wider
         }}
       >
-        {/* predictable column widths */}
+        {/* 🔒 fixed column widths */}
         <colgroup>
           <col style={{ width: unitColW }} />
           {steps.map((s) => (
@@ -124,49 +123,59 @@ function MatrixTable({
           ))}
         </colgroup>
 
+        {/* ================= HEADER ================= */}
         <thead>
           <tr>
-            {/* Unit header */}
             <th
               style={{
                 position: "sticky",
+                top: 0,
                 left: 0,
-                zIndex: 3,
-                background: "#f9fafb",
-                borderBottom: "1px solid #e5e7eb",
+                zIndex: 4,
 
                 height: headerH,
                 minHeight: headerH,
                 maxHeight: headerH,
 
+                background: "#f9fafb",
+                borderBottom: "1px solid #e5e7eb",
+
                 padding: "6px 10px",
                 fontSize: headerFontSize,
                 fontWeight: 600,
                 textAlign: "left",
-                verticalAlign: "middle",
+
+                overflow: "hidden", // 🔒 CRITICAL
+                whiteSpace: "nowrap",
               }}
             >
               Unit
             </th>
 
-            {/* Step headers */}
             {steps.map((s) => (
               <th
                 key={s.id}
                 title={`${s.order}. ${s.name}`}
                 style={{
-                  borderBottom: "1px solid #e5e7eb",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 3,
 
                   height: headerH,
                   minHeight: headerH,
                   maxHeight: headerH,
 
+                  background: "#f9fafb",
+                  borderBottom: "1px solid #e5e7eb",
+
                   padding: "6px 8px",
                   fontSize: headerFontSize,
-                  verticalAlign: "middle",
+                  fontWeight: 500,
+                  textAlign: "left",
+
+                  overflow: "hidden", // 🔒 NO vertical scroll
                 }}
               >
-                {/* 🔒 fixed vertical alignment container */}
                 <div
                   style={{
                     height: "100%",
@@ -177,14 +186,11 @@ function MatrixTable({
                 >
                   <div
                     style={{
+                      lineHeight: 1.15,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-
                       whiteSpace: compact ? "nowrap" : "normal",
                       wordBreak: "break-word",
-                      overflowWrap: "anywhere",
-
-                      lineHeight: 1.15,
                     }}
                   >
                     <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
@@ -196,32 +202,33 @@ function MatrixTable({
           </tr>
         </thead>
 
+        {/* ================= BODY ================= */}
         <tbody>
           {rows.map((row) => (
             <tr key={row.unitId}>
-              {/* Unit cell */}
+              {/* Sticky Unit column */}
               <td
                 title={row.unitId}
                 style={{
                   position: "sticky",
                   left: 0,
                   zIndex: 2,
+
                   background: "#f9fafb",
                   borderTop: "1px solid #e5e7eb",
 
                   padding: "6px 10px",
-                  fontWeight: 600,
                   fontSize: cellFontSize,
+                  fontWeight: 600,
 
-                  whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {row.unitId}
               </td>
 
-              {/* Step cells */}
               {steps.map((step) => {
                 const cell = row.cells[step.id];
                 const bg = cellBackground(cell.statusKind, cell.passed);
@@ -232,7 +239,7 @@ function MatrixTable({
                     key={step.id}
                     style={{
                       borderTop: "1px solid #e5e7eb",
-                      padding: compact ? 4 : 6,
+                      padding: compact ? 3 : 5,
                       verticalAlign: "top",
                     }}
                   >
@@ -243,8 +250,7 @@ function MatrixTable({
                         background: bg,
 
                         padding: compact ? "3px 4px" : "4px 6px",
-                        minHeight: compact ? 44 : 52,
-
+                        minHeight: compact ? 42 : 46, // ✅ smaller height
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
@@ -257,8 +263,6 @@ function MatrixTable({
                         style={{
                           fontSize: cellFontSize,
                           fontWeight: 600,
-                          color: "#111827",
-
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -271,9 +275,6 @@ function MatrixTable({
                         title={cell.date || "-"}
                         style={{
                           fontSize: cellFontSize,
-                          color: "#374151",
-                          marginTop: 1,
-
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -284,7 +285,6 @@ function MatrixTable({
 
                       <div
                         style={{
-                          marginTop: 2,
                           fontSize: cellFontSize,
                           fontWeight: 700,
                           textTransform: "uppercase",
@@ -675,6 +675,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
