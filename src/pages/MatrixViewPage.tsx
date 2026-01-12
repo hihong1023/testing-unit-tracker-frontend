@@ -87,228 +87,232 @@ function MatrixTable({
     >;
   }[];
   steps: TestStep[];
-  compact?: boolean; // true in fullscreen
+  compact?: boolean;
 }) {
   const headerFontSize = compact ? 10 : 12;
   const cellFontSize = compact ? 10 : 11;
 
-  // Column sizing strategy
-  const unitColW = compact ? 80 : 90;
-  const stepColW = compact ? 78 : 150;
+  // column widths
+  const unitColW = compact ? 80 : 100;
+  const stepColW = compact ? 80 : 160;
+
+  // fixed header height → keeps all test names aligned
+  const headerH = compact ? 52 : 64;
 
   return (
-    <table
+    <div
       style={{
         width: "100%",
-        borderCollapse: "separate",
-        borderSpacing: 0,
-
-        // Normal view: allow table to grow wider than viewport
-        // Fullscreen: keep fixed so it fits screen
-        tableLayout: compact ? "fixed" : "auto",
-
-        // This is the KEY that removes side gaps and forces true width
-        minWidth: unitColW + steps.length * stepColW,
+        maxWidth: "100vw",
+        overflowX: "auto",     // ✅ horizontal scroll always visible
+        overflowY: "hidden",   // ✅ no vertical scrollbar here
       }}
     >
-      {/* ---------- column widths ---------- */}
-      <colgroup>
-        <col style={{ width: unitColW }} />
-        {steps.map((s) => (
-          <col key={s.id} style={{ width: stepColW }} />
-        ))}
-      </colgroup>
-
-      {/* ---------- header ---------- */}
-      <thead>
-        <tr>
-          <th
-            style={{
-              position: "sticky",
-              left: 0,
-              zIndex: 2,
-              background: "#f9fafb",
-              padding: "6px 10px",
-              textAlign: "left",
-              borderBottom: "1px solid #e5e7eb",
-              fontSize: headerFontSize,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Unit
-          </th>
-
+      <table
+        style={{
+          borderCollapse: "separate",
+          borderSpacing: 0,
+          tableLayout: compact ? "fixed" : "auto",
+          minWidth: unitColW + steps.length * stepColW, // allow table to grow wider
+        }}
+      >
+        {/* predictable column widths */}
+        <colgroup>
+          <col style={{ width: unitColW }} />
           {steps.map((s) => (
-            <th
-              key={s.id}
-              style={{
-                padding: "6px 6px",
-                borderBottom: "1px solid #e5e7eb",
-            
-                /* 🔒 FIXED HEADER CELL */
-                height: compact ? 52 : 64,
-                minHeight: compact ? 52 : 64,
-                maxHeight: compact ? 52 : 64,
-            
-                verticalAlign: "middle",
-                fontSize: headerFontSize,
-              }}
-              title={`${s.order}. ${s.name}`}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",     // ✅ vertical center
-                  justifyContent: "flex-start",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-            
-                    /* wrapping rules */
-                    whiteSpace: compact ? "nowrap" : "normal",
-                    wordBreak: "break-word",
-                    overflowWrap: "anywhere",
-            
-                    lineHeight: 1.15,
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
-                  <span>{s.name}</span>
-                </div>
-              </div>
-            </th>
-
-              <div
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: compact ? "nowrap" : "normal",
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
-                  lineHeight: 1.15,
-                }}
-              >
-                <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
-                <span>{s.name}</span>
-              </div>
-            </th>
+            <col key={s.id} style={{ width: stepColW }} />
           ))}
-        </tr>
-      </thead>
+        </colgroup>
 
-      {/* ---------- body ---------- */}
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.unitId}>
-            <td
+        <thead>
+          <tr>
+            {/* Unit header */}
+            <th
               style={{
                 position: "sticky",
                 left: 0,
-                zIndex: 1,
+                zIndex: 3,
                 background: "#f9fafb",
+                borderBottom: "1px solid #e5e7eb",
+
+                height: headerH,
+                minHeight: headerH,
+                maxHeight: headerH,
+
                 padding: "6px 10px",
-                borderTop: "1px solid #e5e7eb",
+                fontSize: headerFontSize,
                 fontWeight: 600,
-                fontSize: cellFontSize,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                textAlign: "left",
+                verticalAlign: "middle",
               }}
-              title={row.unitId}
             >
-              {row.unitId}
-            </td>
+              Unit
+            </th>
 
-            {steps.map((step) => {
-              const cell = row.cells[step.id];
-              const bg = cellBackground(cell.statusKind, cell.passed);
-              const border = cellBorderColor(cell.statusKind, cell.passed);
+            {/* Step headers */}
+            {steps.map((s) => (
+              <th
+                key={s.id}
+                title={`${s.order}. ${s.name}`}
+                style={{
+                  borderBottom: "1px solid #e5e7eb",
 
-              return (
-                <td
-                  key={step.id}
+                  height: headerH,
+                  minHeight: headerH,
+                  maxHeight: headerH,
+
+                  padding: "6px 8px",
+                  fontSize: headerFontSize,
+                  verticalAlign: "middle",
+                }}
+              >
+                {/* 🔒 fixed vertical alignment container */}
+                <div
                   style={{
-                    padding: compact ? 3 : 4,
-                    borderTop: "1px solid #e5e7eb",
-                    verticalAlign: "top",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
-                      borderRadius: 6,
-                      border: `1px solid ${border}`,
-                      background: bg,
-                      padding: "2px 4px",
-
-                      // 🔑 This removes vertical bloat
-                      minHeight: compact ? 32 : 36,
-
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
                       overflow: "hidden",
+                      textOverflow: "ellipsis",
+
+                      whiteSpace: compact ? "nowrap" : "normal",
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{s.order}.</span>{" "}
+                    <span>{s.name}</span>
+                  </div>
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.unitId}>
+              {/* Unit cell */}
+              <td
+                title={row.unitId}
+                style={{
+                  position: "sticky",
+                  left: 0,
+                  zIndex: 2,
+                  background: "#f9fafb",
+                  borderTop: "1px solid #e5e7eb",
+
+                  padding: "6px 10px",
+                  fontWeight: 600,
+                  fontSize: cellFontSize,
+
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {row.unitId}
+              </td>
+
+              {/* Step cells */}
+              {steps.map((step) => {
+                const cell = row.cells[step.id];
+                const bg = cellBackground(cell.statusKind, cell.passed);
+                const border = cellBorderColor(cell.statusKind, cell.passed);
+
+                return (
+                  <td
+                    key={step.id}
+                    style={{
+                      borderTop: "1px solid #e5e7eb",
+                      padding: compact ? 4 : 6,
+                      verticalAlign: "top",
                     }}
                   >
                     <div
                       style={{
-                        fontSize: cellFontSize,
-                        fontWeight: 600,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      title={displayTester(cell.tester) || "-"}
-                    >
-                      {displayTester(cell.tester) || "-"}
-                    </div>
+                        borderRadius: 8,
+                        border: `1px solid ${border}`,
+                        background: bg,
 
-                    <div
-                      style={{
-                        fontSize: cellFontSize,
-                        color: "#374151",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      title={cell.date || "-"}
-                    >
-                      {cell.date || "-"}
-                    </div>
+                        padding: compact ? "3px 4px" : "4px 6px",
+                        minHeight: compact ? 44 : 52,
 
-                    <div
-                      style={{
-                        fontSize: cellFontSize,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        color:
-                          cell.statusKind === "SKIPPED"
-                            ? "#6b7280"
-                            : cell.passed === true
-                            ? "#166534"
-                            : cell.passed === false
-                            ? "#b91c1c"
-                            : cell.statusKind === "RUNNING"
-                            ? "#854d0e"
-                            : cell.statusKind === "OVERDUE"
-                            ? "#92400e"
-                            : "#4b5563",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+
+                        overflow: "hidden",
                       }}
                     >
-                      {cell.statusLabel}
+                      <div
+                        title={displayTester(cell.tester) || "-"}
+                        style={{
+                          fontSize: cellFontSize,
+                          fontWeight: 600,
+                          color: "#111827",
+
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {displayTester(cell.tester) || "-"}
+                      </div>
+
+                      <div
+                        title={cell.date || "-"}
+                        style={{
+                          fontSize: cellFontSize,
+                          color: "#374151",
+                          marginTop: 1,
+
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {cell.date || "-"}
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 2,
+                          fontSize: cellFontSize,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          color:
+                            cell.statusKind === "SKIPPED"
+                              ? "#6b7280"
+                              : cell.passed === true
+                              ? "#166534"
+                              : cell.passed === false
+                              ? "#b91c1c"
+                              : cell.statusKind === "RUNNING"
+                              ? "#854d0e"
+                              : cell.statusKind === "OVERDUE"
+                              ? "#92400e"
+                              : "#4b5563",
+                        }}
+                      >
+                        {cell.statusLabel}
+                      </div>
                     </div>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -671,6 +675,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
