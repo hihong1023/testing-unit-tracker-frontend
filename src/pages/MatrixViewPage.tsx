@@ -424,18 +424,28 @@ export default function MatrixViewPage() {
           const tester = a?.tester_id ?? null;
           const skipped = !!a?.skipped;
 
-          // date: scheduler overrides result
-          // ✅ DATE RULE (YOUR REQUIREMENT)
-          // Show date ONLY if result has finished date; otherwise keep null (UI shows "-")
+          // ✅ DATE PRIORITY: Scheduler > Result > null ("-")
           let date: string | null = null;
           
-          const finishedAny =
-            (r as any)?.finished_at_sgt ??
-            (r as any)?.finished_sgt ??
-            (r as any)?.finished_at ??
-            (r as any)?.finishedAt;
+          // 1) Scheduler dates first (end_at, then start_at)
+          if (!skipped && a) {
+            const schedISO = toISODate(a.end_at ?? a.start_at);
+            if (schedISO) date = schedISO;
+          }
           
-          date = finishedAny ? toISODate(finishedAny) : null;
+          // 2) If no scheduler date, use result finished date
+          if (!date) {
+            const finishedAny =
+              (r as any)?.finished_at_sgt ??
+              (r as any)?.finished_sgt ??
+              (r as any)?.finished_at ??
+              (r as any)?.finishedAt;
+          
+            if (finishedAny) date = toISODate(finishedAny);
+          }
+          
+          // 3) If still null -> UI already shows "-" via {cell.date || "-"}
+
 
           
           if (!date && !skipped && a) {
@@ -715,6 +725,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
