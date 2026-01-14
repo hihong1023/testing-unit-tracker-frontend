@@ -11,7 +11,7 @@ function formatSingaporeDateTime(iso?: string | null): string {
 
   // Treat backend timestamps as UTC and display SGT (+8)
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  const sgt = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
+  const sgt = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
 
   const y = sgt.getFullYear();
   const m = String(sgt.getMonth() + 1).padStart(2, "0");
@@ -518,3 +518,4 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
