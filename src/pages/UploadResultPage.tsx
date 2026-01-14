@@ -14,14 +14,8 @@ export default function UploadResultPage() {
   const [stepId, setStepId] = useState("");
   const [passed, setPassed] = useState<"PASS" | "FAIL">("PASS");
 
-  // Finished date (default = today)
-  const [finishedAt, setFinishedAt] = useState<string>(() => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`; // local YYYY-MM-DD (avoid UTC shifting)
-  });
+  // ✅ Finished date starts EMPTY (user must choose)
+  const [finishedAt, setFinishedAt] = useState<string>("");
 
   const [resultId, setResultId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileList | null>(null);
@@ -46,7 +40,8 @@ export default function UploadResultPage() {
       return;
     }
 
-    // ✅ Avoid timezone date shifting: use midday instead of 00:00
+    // ✅ Only send finished_at if user selected a date
+    // Use midday to avoid timezone shifting when backend stores tz-aware timestamps
     const finished_at =
       finishedAt && finishedAt.trim() ? `${finishedAt}T12:00:00` : undefined;
 
@@ -56,20 +51,16 @@ export default function UploadResultPage() {
       const res = await createResult({
         unit_id: unitId,
         step_id: Number(stepId),
-        metrics: {}, // always send empty metrics
+        metrics: {},
         passed: passed === "PASS",
-        finished_at,
+        finished_at, // ✅ undefined if user didn't pick a date
       });
 
       setResultId(res.id);
       setMessage("Result saved. You can now upload log files for this step.");
 
-      // ✅ Force Matrix + Unit Detail to refetch fresh data
-      // Matrix page uses ["matrixDetails", unitIds]
+      // ✅ refresh matrix + unit detail
       await qc.invalidateQueries({ queryKey: ["matrixDetails"] });
-
-      // If your UnitDetails query key is different, adjust this.
-      // Common patterns:
       await qc.invalidateQueries({ queryKey: ["unitDetails", unitId] });
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
     } catch (err: any) {
@@ -95,17 +86,16 @@ export default function UploadResultPage() {
     try {
       setUploading(true);
       const promises: Promise<any>[] = [];
-
       for (let i = 0; i < files.length; i++) {
         const f = files.item(i);
         if (!f) continue;
         promises.push(uploadEvidence(unitId, Number(stepId), resultId, f));
       }
-
       await Promise.all(promises);
+
       setMessage("All files uploaded successfully.");
 
-      // optional: refresh views again (some UIs show logs count)
+      // optional refresh (if logs count is shown)
       await qc.invalidateQueries({ queryKey: ["matrixDetails"] });
       await qc.invalidateQueries({ queryKey: ["unitDetails", unitId] });
       await qc.invalidateQueries({ queryKey: ["unit", unitId] });
@@ -158,7 +148,6 @@ export default function UploadResultPage() {
                 </div>
               </div>
 
-              {/* PASS / FAIL pill */}
               <div
                 className={
                   "result-pill " +
@@ -228,7 +217,9 @@ export default function UploadResultPage() {
 
                 {/* Finished date */}
                 <div className="upload-field">
-                  <label className="upload-label">Finished date</label>
+                  <label className="upload-label">
+                    Finished date <span style={{ fontSize: 11, color: "#6b7280" }}>(optional)</span>
+                  </label>
                   <input
                     type="date"
                     className="upload-control"
@@ -236,11 +227,11 @@ export default function UploadResultPage() {
                     onChange={(e) => setFinishedAt(e.target.value)}
                   />
                   <div className="upload-helper" style={{ fontSize: 11, color: "#6b7280" }}>
-                    This date is saved as the result finished time (SGT/local). Matrix will prioritize it.
+                    Leave blank to keep date as “-” in Matrix / Unit detail.
                   </div>
                 </div>
 
-                {/* Current selection summary – full width */}
+                {/* Current selection summary */}
                 <div className="upload-selection-row">
                   <div className="upload-context-label">Current selection</div>
                   <div className="upload-context-value">
@@ -256,7 +247,7 @@ export default function UploadResultPage() {
                   </div>
                 </div>
 
-                {/* Submit button */}
+                {/* Submit */}
                 <div className="upload-submit-row">
                   <button type="submit" className="btn btn-primary" disabled={submitting}>
                     {submitting ? "Submitting…" : "Submit result"}
