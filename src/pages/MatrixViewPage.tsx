@@ -407,7 +407,19 @@ export default function MatrixViewPage() {
 
           // date: scheduler overrides result
           let date: string | null = null;
-          if (!skipped && a) {
+          
+          // try all common finished fields (because your Unit Detail shows "Finished (SGT)")
+          const finishedAny =
+            (r as any)?.finished_at_sgt ??
+            (r as any)?.finished_sgt ??
+            (r as any)?.finished_at ??
+            (r as any)?.finishedAt;
+          
+          if (finishedAny) {
+            date = toISODate(finishedAny);
+          }
+          
+          if (!date && !skipped && a) {
             const schedISO = toISODate(a.end_at ?? a.start_at);
             if (schedISO) date = schedISO;
           }
@@ -461,10 +473,10 @@ export default function MatrixViewPage() {
               }
 
               // fallback for legacy data
-              if (!raw && r) {
+              if ((raw !== "PASS" && raw !== "FAIL" && raw !== "RUNNING") && r) {
                 statusKind = r.passed ? "PASS" : "FAIL";
                 statusLabel = r.passed ? "PASS" : "FAIL";
-                passed = r.passed;
+                passed = !!r.passed;
               }
             }
           }
@@ -684,6 +696,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
