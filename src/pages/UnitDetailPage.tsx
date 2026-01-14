@@ -21,6 +21,19 @@ function formatSingaporeDateTime(iso?: string | null): string {
   return `${y}-${m}-${d} ${hh}:${mm}`;
 }
 
+function pickDisplayDate(a: any, r: any): string {
+  // 1) Result finished date first
+  if (r?.finished_at) return formatSingaporeDateTime(r.finished_at);
+
+  // 2) Fallback to scheduler end/start date (date only)
+  const sched = a?.end_at ?? a?.start_at;
+  if (sched) return String(sched).slice(0, 10);
+
+  // 3) Neither present
+  return "-";
+}
+
+
 export default function UnitDetailPage() {
   const prompt = usePrompt();
   const navigate = useNavigate();
@@ -440,7 +453,7 @@ export default function UnitDetailPage() {
                       <td>
                         <span className={resultClass}>{resultLabel}</span>
                       </td>
-                      <td>{r ? formatSingaporeDateTime(r.finished_at) : "-"}</td>
+                      <td>{pickDisplayDate(a, r)}</td>
                       <td>
                         {fileCount === 0 ? (
                           <span className="unit-detail-evidence-empty">
@@ -518,4 +531,5 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
