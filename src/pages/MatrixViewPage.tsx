@@ -425,18 +425,18 @@ export default function MatrixViewPage() {
           const skipped = !!a?.skipped;
 
           // date: scheduler overrides result
+          // ✅ DATE RULE (YOUR REQUIREMENT)
+          // Show date ONLY if result has finished date; otherwise keep null (UI shows "-")
           let date: string | null = null;
           
-          // try all common finished fields (because your Unit Detail shows "Finished (SGT)")
           const finishedAny =
             (r as any)?.finished_at_sgt ??
             (r as any)?.finished_sgt ??
             (r as any)?.finished_at ??
             (r as any)?.finishedAt;
           
-          if (finishedAny) {
-            date = toISODate(finishedAny);
-          }
+          date = finishedAny ? toISODate(finishedAny) : null;
+
           
           if (!date && !skipped && a) {
             const schedISO = toISODate(a.end_at ?? a.start_at);
@@ -715,6 +715,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
