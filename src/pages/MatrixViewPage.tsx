@@ -16,6 +16,10 @@ function formatDateFromISO(value?: string | null): string {
   return value.slice(0, 10); // "YYYY-MM-DD"
 }
 
+function isBlankSentinel(iso?: string | null) {
+  return !!iso && iso.startsWith("1970-01-01");
+}
+
 function toISODate(value: any): string | null {
   if (!value) return null;
 
@@ -424,25 +428,27 @@ export default function MatrixViewPage() {
           const tester = a?.tester_id ?? null;
           const skipped = !!a?.skipped;
 
-          // ✅ DATE PRIORITY: Result > Scheduler > null ("-")
+          // ✅ DATE PRIORITY: Result (non-sentinel) > Scheduler > null ("-")
           let date: string | null = null;
           
-          // 1) Result finished date first (what you set in Upload page)
+          // 1) Result finished date first (ignore sentinel 1970-01-01)
           const finishedAny =
             (r as any)?.finished_at_sgt ??
             (r as any)?.finished_sgt ??
             (r as any)?.finished_at ??
             (r as any)?.finishedAt;
           
-          if (finishedAny) {
-            date = toISODate(finishedAny);
+          const finishedISO = toISODate(finishedAny);
+          if (finishedISO && !isBlankSentinel(finishedISO)) {
+            date = finishedISO;
           }
           
           // 2) If no result date, fallback to scheduler end/start date
           if (!date && !skipped && a) {
-            const schedISO = toISODate(a.end_at ?? a.start_at);
+            const schedISO = toISODate((a as any).end_at ?? (a as any).start_at);
             if (schedISO) date = schedISO;
           }
+
 
           
           // 3) If still null -> UI already shows "-" via {cell.date || "-"}
@@ -726,6 +732,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
