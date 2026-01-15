@@ -252,19 +252,23 @@ export default function SchedulerPage() {
   ) {
     setEditState((prev) => {
       const current = prev[a.id] ?? buildBaseRow(a);
-      let next: RowState = { ...current, [field]: value };
-
+      const next: RowState = { ...current, [field]: value, dirty: true };
+  
+      // ✅ Only enforce ordering if BOTH dates exist
       if (field === "start_date") {
-        if (next.end_date && next.end_date < value) next.end_date = value;
-      } else if (field === "end_date") {
-        if (next.start_date && value < next.start_date)
+        if (next.start_date && next.end_date && next.end_date < next.start_date) {
           next.end_date = next.start_date;
+        }
+      } else if (field === "end_date") {
+        if (next.start_date && next.end_date && next.end_date < next.start_date) {
+          next.start_date = next.end_date;
+        }
       }
-
-      next.dirty = true;
+  
       return { ...prev, [a.id]: next };
     });
   }
+
 
   function handleSuggest(unitId: string, stepId: number) {
     if (!assignments || !steps) return;
@@ -585,3 +589,4 @@ export default function SchedulerPage() {
     </div>
   );
 }
+
