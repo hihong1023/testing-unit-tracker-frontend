@@ -32,17 +32,23 @@ function formatSingaporeDateTime(iso?: string | null): string {
   if (iso.startsWith("1970-01-01")) return "-";
 
   // If backend already provides timezone (Z or +08:00 etc), respect it.
-  // If backend provides naive time, assume it's SGT and append +08:00.
+  // If backend provides naive time, assume it's SGT.
   const hasTZ = /([zZ]|[+\-]\d{2}:\d{2})$/.test(iso);
   const d = new Date(hasTZ ? iso : iso + "+08:00");
 
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${day} ${hh}:${mm}`;
+  // Force SGT display regardless of user's machine timezone
+  // sv-SE gives "YYYY-MM-DD HH:mm"
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Singapore",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
+
 
 
 function pickDisplayDate(a: any, r: any): string {
@@ -562,6 +568,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
