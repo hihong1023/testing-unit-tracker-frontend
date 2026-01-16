@@ -29,20 +29,21 @@ function toISODate(value: any): string | null {
 
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
-  if (isBlankSentinel(iso)) return "-";
+  if (iso.startsWith("1970-01-01")) return "-";
 
-  // Treat backend timestamps as UTC and display SGT (+8)
-  // NOTE: your original code had +0 hours; SGT should be +8.
-  const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  const sgt = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
+  // If backend already provides timezone (Z or +08:00 etc), respect it.
+  // If backend provides naive time, assume it's SGT and append +08:00.
+  const hasTZ = /([zZ]|[+\-]\d{2}:\d{2})$/.test(iso);
+  const d = new Date(hasTZ ? iso : iso + "+08:00");
 
-  const y = sgt.getFullYear();
-  const m = String(sgt.getMonth() + 1).padStart(2, "0");
-  const d = String(sgt.getDate()).padStart(2, "0");
-  const hh = String(sgt.getHours()).padStart(2, "0");
-  const mm = String(sgt.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d} ${hh}:${mm}`;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day} ${hh}:${mm}`;
 }
+
 
 function pickDisplayDate(a: any, r: any): string {
   // 1) ✅ Result finished time (PASS/FAIL from tester queue or upload)
@@ -561,6 +562,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
