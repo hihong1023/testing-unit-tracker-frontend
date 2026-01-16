@@ -359,6 +359,9 @@ export default function MatrixViewPage() {
   const [page, setPage] = useState(0);
   const [hideCompleted, setHideCompleted] = useState(true);
 
+  type SortMode = "unit_asc" | "unit_desc" | "progress_desc" | "progress_asc";
+  const [sortMode, setSortMode] = useState<SortMode>("unit_asc");
+
   const unitIds = useMemo(() => (units ?? []).map((u) => u.unit_id), [units]);
 
   const unitStatusMap = useMemo(() => {
@@ -386,6 +389,15 @@ export default function MatrixViewPage() {
       return list;
     },
   });
+
+
+  const unitProgressMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    (units ?? []).forEach((u) => {
+      m[u.unit_id] = u.progress_percent ?? 0;
+    });
+    return m;
+  }, [units]);
 
   const stepsOrdered: TestStep[] = useMemo(
     () => (steps ?? []).slice().sort((a, b) => a.order - b.order),
@@ -538,13 +550,32 @@ export default function MatrixViewPage() {
 
   const filteredRows = useMemo(() => {
     if (rows.length === 0) return [];
-    return rows.filter((row) => {
+  
+    const filtered = rows.filter((row) => {
       const status = unitStatusMap[row.unitId];
       if (!status) return true;
       if (hideCompleted && status === "COMPLETED") return false;
       return true;
     });
-  }, [rows, unitStatusMap, hideCompleted]);
+  
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  
+    filtered.sort((a, b) => {
+      if (sortMode === "unit_asc") return collator.compare(a.unitId, b.unitId);
+      if (sortMode === "unit_desc") return collator.compare(b.unitId, a.unitId);
+  
+      const pa = unitProgressMap[a.unitId] ?? 0;
+      const pb = unitProgressMap[b.unitId] ?? 0;
+  
+      if (sortMode === "progress_desc") return pb - pa;
+      if (sortMode === "progress_asc") return pa - pb;
+  
+      return 0;
+    });
+  
+    return filtered;
+  }, [rows, unitStatusMap, hideCompleted, sortMode, unitProgressMap]);
+
 
   const rowsPerPage = 12;
   const totalPages =
@@ -611,7 +642,19 @@ export default function MatrixViewPage() {
         </div>
 
         {rows.length > 0 && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="input"
+              style={{ height: 36, padding: "0 10px" }}
+            >
+              <option value="unit_asc">Unit ID (A → Z)</option>
+              <option value="unit_desc">Unit ID (Z → A)</option>
+              <option value="progress_desc">Progress (High → Low)</option>
+              <option value="progress_asc">Progress (Low → High)</option>
+            </select>
+        
             <button
               type="button"
               className="btn btn-outline"
@@ -619,12 +662,13 @@ export default function MatrixViewPage() {
             >
               {hideCompleted ? "Show completed units" : "Hide completed units"}
             </button>
-
+        
             <button className="btn btn-secondary" onClick={() => setIsFullscreen(true)}>
               Full screen
             </button>
           </div>
         )}
+
       </header>
 
       {anyLoading && <div style={{ padding: 12 }}>Loading matrix…</div>}
@@ -732,6 +776,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
