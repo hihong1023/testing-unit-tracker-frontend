@@ -7,8 +7,7 @@ import { usePrompt } from "../components/PromptProvider";
 import { useQueryClient } from "@tanstack/react-query";
 
 function isBlankSentinel(iso?: string | null) {
-  // backend "blank date" sentinel
-  return !!iso && iso.startsWith("1970-01-01");
+  return !!iso && String(iso).startsWith("1970-01-01");
 }
 
 function toISODate(value: any): string | null {
@@ -46,28 +45,19 @@ function formatSingaporeDateTime(iso?: string | null): string {
 }
 
 function pickDisplayDate(a: any, r: any): string {
-  // Priority: Tester result date (Tester Queue / Upload page) > Scheduler dates > "-"
-
-  const finishedAny =
-    r?.finished_at_sgt ??
-    r?.finished_sgt ??
-    r?.finished_at ??
-    r?.finishedAt;
-
-  // 1) Tester / Upload result date (ignore sentinel 1970-01-01)
-  if (finishedAny) {
-    const asStr = String(finishedAny);
-    if (!isBlankSentinel(asStr)) {
-      // if it is a full timestamp, show datetime; if it's only YYYY-MM-DD, show date
-      if (asStr.length > 10) return formatSingaporeDateTime(asStr);
-      return asStr.slice(0, 10);
-    }
+  // 1) ✅ Result finished time (PASS/FAIL from tester queue or upload)
+  const finishedAny = r?.finished_at;
+  if (finishedAny && !isBlankSentinel(String(finishedAny))) {
+    return formatSingaporeDateTime(String(finishedAny));
   }
 
-  // 2) Scheduler fallback (date only)
+  // 2) ✅ Tester actual start/end (RUNNING button should show NOW)
+  const actualAny = a?.actual_end_at ?? a?.actual_start_at;
+  if (actualAny) return formatSingaporeDateTime(String(actualAny));
+
+  // 3) Scheduler planned dates (date only)
   const sched = a?.end_at ?? a?.start_at;
-  const schedISO = toISODate(sched);
-  if (schedISO) return schedISO;
+  if (sched) return String(sched).slice(0, 10);
 
   return "-";
 }
@@ -571,6 +561,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
