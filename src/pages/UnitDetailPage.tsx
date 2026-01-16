@@ -46,32 +46,32 @@ function formatSingaporeDateTime(iso?: string | null): string {
 }
 
 function pickDisplayDate(a: any, r: any): string {
-  // ✅ Result > Scheduler > "-"
-  // ✅ Ignore sentinel 1970-01-01
+  // Priority: Tester result date (Tester Queue / Upload page) > Scheduler dates > "-"
 
-  // 1) Result finished date first (try multiple possible keys)
   const finishedAny =
     r?.finished_at_sgt ??
     r?.finished_sgt ??
     r?.finished_at ??
     r?.finishedAt;
 
-  // If backend gives datetime -> show SGT datetime
+  // 1) Tester / Upload result date (ignore sentinel 1970-01-01)
   if (finishedAny) {
     const asStr = String(finishedAny);
     if (!isBlankSentinel(asStr)) {
-      return formatSingaporeDateTime(asStr);
+      // if it is a full timestamp, show datetime; if it's only YYYY-MM-DD, show date
+      if (asStr.length > 10) return formatSingaporeDateTime(asStr);
+      return asStr.slice(0, 10);
     }
   }
 
-  // 2) Fallback to scheduler end/start date (date only)
+  // 2) Scheduler fallback (date only)
   const sched = a?.end_at ?? a?.start_at;
   const schedISO = toISODate(sched);
   if (schedISO) return schedISO;
 
-  // 3) Neither present
   return "-";
 }
+
 
 
 export default function UnitDetailPage() {
@@ -571,6 +571,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
