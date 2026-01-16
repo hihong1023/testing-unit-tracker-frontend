@@ -6,12 +6,36 @@ import { getToken, API_BASE_URL } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 import { useQueryClient } from "@tanstack/react-query";
 
+function isBlankSentinel(iso?: string | null) {
+  // backend "blank date" sentinel
+  return !!iso && iso.startsWith("1970-01-01");
+}
+
+function toISODate(value: any): string | null {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    const s10 = value.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s10)) return s10;
+
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 10);
+  }
+
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
+  if (isBlankSentinel(iso)) return "-";
 
   // Treat backend timestamps as UTC and display SGT (+8)
+  // NOTE: your original code had +0 hours; SGT should be +8.
   const utc = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  const sgt = new Date(utc.getTime() + 0 * 60 * 60 * 1000);
+  const sgt = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
 
   const y = sgt.getFullYear();
   const m = String(sgt.getMonth() + 1).padStart(2, "0");
@@ -22,12 +46,28 @@ function formatSingaporeDateTime(iso?: string | null): string {
 }
 
 function pickDisplayDate(a: any, r: any): string {
-  // 1) Result finished date first
-  if (r?.finished_at) return formatSingaporeDateTime(r.finished_at);
+  // ✅ Result > Scheduler > "-"
+  // ✅ Ignore sentinel 1970-01-01
+
+  // 1) Result finished date first (try multiple possible keys)
+  const finishedAny =
+    r?.finished_at_sgt ??
+    r?.finished_sgt ??
+    r?.finished_at ??
+    r?.finishedAt;
+
+  // If backend gives datetime -> show SGT datetime
+  if (finishedAny) {
+    const asStr = String(finishedAny);
+    if (!isBlankSentinel(asStr)) {
+      return formatSingaporeDateTime(asStr);
+    }
+  }
 
   // 2) Fallback to scheduler end/start date (date only)
   const sched = a?.end_at ?? a?.start_at;
-  if (sched) return String(sched).slice(0, 10);
+  const schedISO = toISODate(sched);
+  if (schedISO) return schedISO;
 
   // 3) Neither present
   return "-";
@@ -531,5 +571,6 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
