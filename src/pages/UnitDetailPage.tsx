@@ -29,15 +29,20 @@ function toISODate(value: any): string | null {
 
 function formatSingaporeDateTime(iso?: string | null): string {
   if (!iso) return "-";
-  if (iso.startsWith("1970-01-01")) return "-";
+  const raw = String(iso).trim();
+  if (!raw || raw.startsWith("1970-01-01")) return "-";
 
-  // If backend already provides timezone (Z or +08:00 etc), respect it.
-  // If backend provides naive time, assume it's SGT.
-  const hasTZ = /([zZ]|[+\-]\d{2}:\d{2})$/.test(iso);
-  const d = new Date(hasTZ ? iso : iso + "+08:00");
+  // Normalize "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm:ss"
+  let s = raw.includes(" ") && !raw.includes("T") ? raw.replace(" ", "T") : raw;
+
+  // If there's NO timezone info, assume UTC (backend often serializes naive UTC)
+  const hasTZ = /([zZ]|[+\-]\d{2}:\d{2})$/.test(s);
+  if (!hasTZ) s = s + "Z";
+
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "-";
 
   // Force SGT display regardless of user's machine timezone
-  // sv-SE gives "YYYY-MM-DD HH:mm"
   return new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Singapore",
     year: "numeric",
@@ -48,6 +53,7 @@ function formatSingaporeDateTime(iso?: string | null): string {
     hour12: false,
   }).format(d);
 }
+
 
 
 
@@ -568,6 +574,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
