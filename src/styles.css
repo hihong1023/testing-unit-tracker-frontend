@@ -1335,3 +1335,9 @@ body::-webkit-scrollbar-thumb {
   padding: 4px 6px;
 }
 
+.sub-check,
+.sub-check input,
+.sub-check label {
+  cursor: pointer;
+}
+
