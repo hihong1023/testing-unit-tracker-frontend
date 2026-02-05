@@ -89,6 +89,8 @@ export default function UnitDetailPage() {
 
   const { data, isLoading, error } = useUnitDetails(unitId || "");
   const { data: steps } = useSteps();
+  const [editingRemarkId, setEditingRemarkId] = useState<string | null>(null);
+  const [remarkDraft, setRemarkDraft] = useState("");
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -344,6 +346,35 @@ export default function UnitDetailPage() {
     }
   }
 
+  async function saveRemark(assignId: string, value: string | null) {
+    try {
+      const token = getToken();
+      const res = await fetch(
+        `${API_BASE_URL}/tester/assignments/${encodeURIComponent(assignId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ remark: value }),
+        }
+      );
+  
+      if (!res.ok) throw new Error(await res.text());
+  
+      await qc.invalidateQueries({ queryKey: ["unit", unitId] });
+  
+      setEditingRemarkId(null);
+      setRemarkDraft("");
+    } catch (err: any) {
+      prompt.alert(
+        `Failed to save remark: ${err.message || err}`,
+        "Remark Error"
+      );
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -485,16 +516,73 @@ export default function UnitDetailPage() {
                       </td>
                       <td>{pickDisplayDate(a, r)}</td>
                       <td style={{ maxWidth: 280 }}>
-                        {a?.remark ? (
+                        {editingRemarkId === a?.id ? (
+                          <div className="unit-detail-remark-edit">
+                            <textarea
+                              value={remarkDraft}
+                              onChange={(e) => setRemarkDraft(e.target.value)}
+                              rows={3}
+                              className="scheduler-field"
+                              placeholder="Enter remark… (Markdown supported)"
+                              style={{ width: "100%", resize: "vertical" }}
+                            />
+                      
+                            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                              <button
+                                className="btn btn-primary btn-xs"
+                                onClick={() => saveRemark(a.id, remarkDraft.trim() || null)}
+                              >
+                                Save
+                              </button>
+                      
+                              <button
+                                className="btn btn-outline btn-xs"
+                                onClick={() => {
+                                  setEditingRemarkId(null);
+                                  setRemarkDraft("");
+                                }}
+                              >
+                                Cancel
+                              </button>
+                      
+                              <button
+                                className="btn btn-danger-outline btn-xs"
+                                onClick={() => saveRemark(a.id, null)}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                        ) : a?.remark ? (
                           <div className="unit-detail-remark">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {a.remark}
                             </ReactMarkdown>
+                      
+                            <button
+                              className="btn btn-outline btn-xs"
+                              style={{ marginTop: 6 }}
+                              onClick={() => {
+                                setEditingRemarkId(a.id);
+                                setRemarkDraft(a.remark || "");
+                              }}
+                            >
+                              Edit
+                            </button>
                           </div>
                         ) : (
-                          <span className="text-muted">-</span>
+                          <button
+                            className="btn btn-outline btn-xs"
+                            onClick={() => {
+                              setEditingRemarkId(a.id);
+                              setRemarkDraft("");
+                            }}
+                          >
+                            Add remark
+                          </button>
                         )}
                       </td>
+
 
                       <td>
                         {fileCount === 0 ? (
@@ -573,6 +661,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
