@@ -118,7 +118,13 @@ interface UnitCard {
 }
 
 function TesterQueueTesterView() {
+  const [remarkOpen, setRemarkOpen] = React.useState(false);
+  const [remarkValue, setRemarkValue] = React.useState("");
+  const [remarkAssignment, setRemarkAssignment] =
+    React.useState<Assignment | null>(null);
+
   const prompt = usePrompt();
+
   const user = getUser();
   const testerId = user?.name ?? "";
 
@@ -464,11 +470,17 @@ function TesterQueueTesterView() {
                       </button>
                     )}
                 
-                    <button
-                      style={btnRemark}
-                    >
-                      REMARK
-                    </button>
+                  <button
+                    style={btnRemark}
+                    onClick={() => {
+                      setRemarkAssignment(a);
+                      setRemarkValue(a.remark ?? "");
+                      setRemarkOpen(true);
+                    }}
+                  >
+                    REMARK
+                  </button>
+
                   </div>
                 </div>
 
@@ -533,6 +545,77 @@ function TesterQueueTesterView() {
           );
         })}
       </div>
+      {/* STEP 4: Remark Modal */}
+      {remarkOpen && remarkAssignment && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 10,
+              padding: "1rem",
+              width: 360,
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>Remark</h3>
+
+            <textarea
+              value={remarkValue}
+              onChange={(e) => setRemarkValue(e.target.value)}
+              rows={4}
+              style={{
+                width: "100%",
+                borderRadius: 6,
+                border: "1px solid #d1d5db",
+                padding: "0.5rem",
+                fontSize: 13,
+              }}
+              autoFocus
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+                marginTop: "0.75rem",
+              }}
+            >
+              <button onClick={() => setRemarkOpen(false)}>
+                Cancel
+              </button>
+
+              <button
+                style={{
+                  background: "#2563eb",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "0.3rem 0.75rem",
+                }}
+                onClick={() => {
+                  patchAssignmentMutation.mutate({
+                    assignmentId: remarkAssignment.id,
+                    payload: { remark: remarkValue },
+                  });
+                  setRemarkOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}      
     </div>
   );
 }
@@ -602,6 +685,7 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
 
