@@ -5,6 +5,8 @@ import { useUnitDetails, useSteps } from "../hooks";
 import { getToken, API_BASE_URL } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 import { useQueryClient } from "@tanstack/react-query";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function isBlankSentinel(iso?: string | null) {
   return !!iso && String(iso).startsWith("1970-01-01");
@@ -371,9 +373,6 @@ export default function UnitDetailPage() {
             </div>
           </div>
 
-          <span className="unit-detail-status-pill">
-            {data.unit.status ?? "UNKNOWN"}
-          </span>
         </div>
       </header>
 
@@ -441,10 +440,11 @@ export default function UnitDetailPage() {
                 <th>#</th>
                 <th>Step</th>
                 <th>Tester</th>
-                <th>Assignment Status</th>
                 <th>Result</th>
-                <th>Finished (SGT)</th>
+                <th>Finished at</th>
+                <th>Remark</th>
                 <th>Logs</th>
+
               </tr>
             </thead>
             <tbody>
@@ -481,22 +481,21 @@ export default function UnitDetailPage() {
                       <td>{s.name}</td>
                       <td>{a?.tester_id || "-"}</td>
                       <td>
-                        <div>{skipped ? "SKIPPED (N/A)" : a?.status || "-"}</div>
-                        {!r && a && (
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-xs"
-                            style={{ marginTop: 4 }}
-                            onClick={() => handleToggleSkip(a.id, a.skipped)}
-                          >
-                            {skipped ? "Re-enable step" : "Mark not tested"}
-                          </button>
-                        )}
-                      </td>
-                      <td>
                         <span className={resultClass}>{resultLabel}</span>
                       </td>
                       <td>{pickDisplayDate(a, r)}</td>
+                      <td style={{ maxWidth: 280 }}>
+                        {a?.remark ? (
+                          <div className="unit-detail-remark">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {a.remark}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </td>
+
                       <td>
                         {fileCount === 0 ? (
                           <span className="unit-detail-evidence-empty">
@@ -574,6 +573,7 @@ export default function UnitDetailPage() {
     </div>
   );
 }
+
 
 
 
