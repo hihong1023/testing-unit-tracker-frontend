@@ -47,6 +47,14 @@ export interface Assignment {
   end_at?: string | null;
   status: string;
   prev_passed?: boolean;
+
+  sub_checks?: {
+    ambient: boolean;
+    low: boolean;
+    high: boolean;
+  } | null;
+
+  remark?: string | null;
 }
 
 export interface Result {
@@ -329,4 +337,5 @@ export async function duplicateSchedule(
 export function fetchTesterGroups(): Promise<Record<string, string[]>> {
   return request("/testers/groups");
 }
+
 
