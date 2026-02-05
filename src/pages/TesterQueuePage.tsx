@@ -485,8 +485,7 @@ function TesterQueueTesterView() {
 
 
 
-                {isPreVibration ? (
-                  /* === Pre-Vibration special UI === */
+                {isPreVibration && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                     {(["ambient", "low", "high"] as (keyof SubChecks)[]).map((k) => (
                       <label
@@ -504,18 +503,12 @@ function TesterQueueTesterView() {
                           onChange={() => {
                             const next = { ...subChecks, [k]: !subChecks[k] };
                 
-                            // 1️⃣ save checkbox state
                             patchAssignmentMutation.mutate({
                               assignmentId: a.id,
                               payload: { sub_checks: next },
                             });
                 
-                            // 2️⃣ auto-PASS when all checked
-                            if (
-                              allChecked(next) &&
-                              a.status !== "PASS" &&
-                              !resultMutation.isLoading
-                            ) {
+                            if (allChecked(next) && !resultMutation.isLoading) {
                               resultMutation.mutate({
                                 unit_id: card.unit_id,
                                 step_id: a.step_id,
@@ -523,20 +516,14 @@ function TesterQueueTesterView() {
                                 passed: true,
                               });
                             }
-
                           }}
                         />
                         {k.toUpperCase()}
                       </label>
                     ))}
                   </div>
-                ) : (
-                  /* === All other steps keep existing PASS / FAIL === */
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.4rem" }}>
-                    <button onClick={() => handleQuickResult(card, true)}>PASS</button>
-                    <button onClick={() => handleQuickResult(card, false)}>FAIL</button>
-                  </div>
                 )}
+
 
               </div>
 
@@ -625,5 +612,6 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
