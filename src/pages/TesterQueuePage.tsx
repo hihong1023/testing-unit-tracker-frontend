@@ -62,6 +62,7 @@ const btnFail = {
 };
 
 const btnRunning = {
+  flex: 1,
   padding: "0.25rem 0.5rem",
   borderRadius: 999,
   border: "1px solid #facc15",
@@ -73,6 +74,7 @@ const btnRunning = {
 };
 
 const btnRemark = {
+  flex: 1,
   padding: "0.25rem 0.5rem",
   borderRadius: 999,
   border: "1px solid #93c5fd",
@@ -613,6 +615,7 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
 
