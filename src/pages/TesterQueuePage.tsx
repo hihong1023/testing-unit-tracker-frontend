@@ -37,6 +37,51 @@ function formatDateShort(value?: string | null): string {
   return value;
 }
 
+const btnPass = {
+  flex: 1,
+  padding: "0.25rem 0.5rem",
+  borderRadius: 999,
+  border: "1px solid #22c55e",
+  background: "#dcfce7",
+  color: "#166534",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const btnFail = {
+  flex: 1,
+  padding: "0.25rem 0.5rem",
+  borderRadius: 999,
+  border: "1px solid #f97373",
+  background: "#fee2e2",
+  color: "#b91c1c",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const btnRunning = {
+  padding: "0.25rem 0.5rem",
+  borderRadius: 999,
+  border: "1px solid #facc15",
+  background: "#fef9c3",
+  color: "#854d0e",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const btnRemark = {
+  padding: "0.25rem 0.5rem",
+  borderRadius: 999,
+  border: "1px solid #93c5fd",
+  background: "#eff6ff",
+  color: "#1e40af",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+};
 
 
 /* --------------- Main entry ---------------- */
@@ -112,7 +157,10 @@ function TesterQueueTesterView() {
       remark: string;
     }>;
   }) => {
-    const res = await fetch(`/tester/assignments/${assignmentId}`, {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/tester/assignments/${assignmentId}`,
+      {
+
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -231,6 +279,7 @@ function TesterQueueTesterView() {
     });
   };
 
+  
   return (
     <div>
       <h2>Today&apos;s Queue (Tester)</h2>
@@ -378,25 +427,50 @@ function TesterQueueTesterView() {
                 }}
               >
                 {/* RUNNING button – only for PENDING assignments */}
+                {/* Action buttons row */}
                 <div style={{ display: "flex", gap: "0.4rem" }}>
-                  {a.status === "PENDING" && (
+                  {/* PASS */}
+                  {!isPreVibration && (
                     <button
-                      onClick={() => handleStartRunning(card)}
-                      disabled={statusMutation.isLoading}
+                      style={btnPass}
+                      onClick={() => handleQuickResult(card, true)}
+                      disabled={resultMutation.isLoading}
                     >
-                      MARK AS RUNNING
+                      PASS
                     </button>
                   )}
                 
+                  {/* FAIL */}
+                  {!isPreVibration && (
+                    <button
+                      style={btnFail}
+                      onClick={() => handleQuickResult(card, false)}
+                      disabled={resultMutation.isLoading}
+                    >
+                      FAIL
+                    </button>
+                  )}
+                
+                  {/* RUNNING */}
+                  {a.status === "PENDING" && (
+                    <button
+                      style={btnRunning}
+                      onClick={() => handleStartRunning(card)}
+                      disabled={statusMutation.isLoading}
+                    >
+                      RUNNING
+                    </button>
+                  )}
+                
+                  {/* REMARK */}
                   <button
-                    type="button"
+                    style={btnRemark}
                     onClick={async () => {
                       const text = await prompt.input(
                         "Remark",
                         "Enter any special note",
                         a.remark ?? ""
                       );
-                
                       if (text !== null) {
                         patchAssignmentMutation.mutate({
                           assignmentId: a.id,
@@ -408,6 +482,7 @@ function TesterQueueTesterView() {
                     REMARK
                   </button>
                 </div>
+
 
 
                 {isPreVibration ? (
@@ -550,4 +625,5 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
