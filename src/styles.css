@@ -1317,3 +1317,21 @@ body::-webkit-scrollbar-thumb {
   margin-top: 12px;
 }
 
+.unit-detail-remark {
+  font-size: 13px;
+  line-height: 1.4;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.unit-detail-remark table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.unit-detail-remark th,
+.unit-detail-remark td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+}
+
