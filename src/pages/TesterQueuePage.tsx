@@ -11,6 +11,19 @@ import {
 import type { Assignment, TestStep, UnitSummary } from "../api";
 import { usePrompt } from "../components/PromptProvider";
 
+
+const PRE_VIBRATION_STEP_ID = 5;
+
+type SubChecks = {
+  ambient: boolean;
+  low: boolean;
+  high: boolean;
+};
+
+function allChecked(v?: SubChecks) {
+  return !!v && v.ambient && v.low && v.high;
+}
+
 /* ----------------- Helpers ----------------- */
 
 function toDateKey(value?: string | null): string | null {
@@ -23,6 +36,8 @@ function formatDateShort(value?: string | null): string {
   if (value.length >= 10) return value.slice(0, 10);
   return value;
 }
+
+
 
 /* --------------- Main entry ---------------- */
 
@@ -86,6 +101,34 @@ function TesterQueueTesterView() {
 
   const statusMutation = useTesterSetStatus();   // 👈 NEW
 
+  const patchAssignmentMutation = useMutation({
+  mutationFn: async ({
+    assignmentId,
+    payload,
+  }: {
+    assignmentId: string;
+    payload: Partial<{
+      sub_checks: SubChecks;
+      remark: string;
+    }>;
+  }) => {
+    const res = await fetch(`/tester/assignments/${assignmentId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error("Failed to update assignment");
+    return res.json();
+  },
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["testerAssignments", testerId] });
+  },
+});
+
   if (!testerId) {
     return (
       <div>
@@ -144,7 +187,12 @@ function TesterQueueTesterView() {
     return cards;
   }, [assignments, stepById, todayKey]);
 
+
   const handleQuickResult = async (card: UnitCard, passed: boolean) => {
+    if (card.assignment.step_id === PRE_VIBRATION_STEP_ID) {
+      return;
+    }
+    
     if (resultMutation.isLoading) return;
 
     const ok = await prompt.confirm(
@@ -214,6 +262,14 @@ function TesterQueueTesterView() {
       >
         {unitCards.map((card) => {
           const a = card.assignment;
+          const isPreVibration = a.step_id === PRE_VIBRATION_STEP_ID;
+
+          const subChecks: SubChecks = a.sub_checks ?? {
+            ambient: false,
+            low: false,
+            high: false,
+          };
+
           const stepName =
             card.step?.name ?? `Step ${card.assignment.step_id}`;
           const start = formatDateShort(a.start_at);
@@ -322,70 +378,91 @@ function TesterQueueTesterView() {
                 }}
               >
                 {/* RUNNING button – only for PENDING assignments */}
-                {a.status === "PENDING" && (
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  {a.status === "PENDING" && (
+                    <button
+                      onClick={() => handleStartRunning(card)}
+                      disabled={statusMutation.isLoading}
+                    >
+                      MARK AS RUNNING
+                    </button>
+                  )}
+                
                   <button
                     type="button"
-                    onClick={() => handleStartRunning(card)}
-                    disabled={statusMutation.isLoading}
-                    style={{
-                      padding: "0.25rem 0.5rem",
-                      borderRadius: 999,
-                      border: "1px solid #facc15",
-                      background: "#fef9c3",
-                      color: "#854d0e",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
+                    onClick={async () => {
+                      const text = await prompt.input(
+                        "Remark",
+                        "Enter any special note",
+                        a.remark ?? ""
+                      );
+                
+                      if (text !== null) {
+                        patchAssignmentMutation.mutate({
+                          assignmentId: a.id,
+                          payload: { remark: text },
+                        });
+                      }
                     }}
                   >
-                    MARK AS RUNNING
-                  </button>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "0.4rem",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleQuickResult(card, true)}
-                    disabled={resultMutation.isLoading}
-                    style={{
-                      flex: 1,
-                      padding: "0.25rem 0.5rem",
-                      borderRadius: 999,
-                      border: "1px solid #22c55e",
-                      background: "#dcfce7",
-                      color: "#166534",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    PASS
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickResult(card, false)}
-                    disabled={resultMutation.isLoading}
-                    style={{
-                      flex: 1,
-                      padding: "0.25rem 0.5rem",
-                      borderRadius: 999,
-                      border: "1px solid #f97373",
-                      background: "#fee2e2",
-                      color: "#b91c1c",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    FAIL
+                    REMARK
                   </button>
                 </div>
+
+
+                {isPreVibration ? (
+                  /* === Pre-Vibration special UI === */
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    {(["ambient", "low", "high"] as (keyof SubChecks)[]).map((k) => (
+                      <label
+                        key={k}
+                        style={{
+                          fontSize: 12,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={subChecks[k]}
+                          onChange={() => {
+                            const next = { ...subChecks, [k]: !subChecks[k] };
+                
+                            // 1️⃣ save checkbox state
+                            patchAssignmentMutation.mutate({
+                              assignmentId: a.id,
+                              payload: { sub_checks: next },
+                            });
+                
+                            // 2️⃣ auto-PASS when all checked
+                            if (
+                              allChecked(next) &&
+                              a.status !== "PASS" &&
+                              !resultMutation.isLoading
+                            ) {
+                              resultMutation.mutate({
+                                unit_id: card.unit_id,
+                                step_id: a.step_id,
+                                metrics: next,
+                                passed: true,
+                              });
+                            }
+
+                          }}
+                        />
+                        {k.toUpperCase()}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  /* === All other steps keep existing PASS / FAIL === */
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.4rem" }}>
+                    <button onClick={() => handleQuickResult(card, true)}>PASS</button>
+                    <button onClick={() => handleQuickResult(card, false)}>FAIL</button>
+                  </div>
+                )}
+
               </div>
 
               {(resultMutation.isLoading || statusMutation.isLoading) && (
@@ -473,3 +550,4 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
