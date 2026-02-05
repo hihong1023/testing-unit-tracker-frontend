@@ -428,60 +428,61 @@ function TesterQueueTesterView() {
               >
                 {/* RUNNING button – only for PENDING assignments */}
                 {/* Action buttons row */}
-                <div style={{ display: "flex", gap: "0.4rem" }}>
-                  {/* PASS */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  {/* Row 1: PASS / FAIL */}
                   {!isPreVibration && (
-                    <button
-                      style={btnPass}
-                      onClick={() => handleQuickResult(card, true)}
-                      disabled={resultMutation.isLoading}
-                    >
-                      PASS
-                    </button>
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      <button
+                        style={btnPass}
+                        onClick={() => handleQuickResult(card, true)}
+                        disabled={resultMutation.isLoading}
+                      >
+                        PASS
+                      </button>
+                
+                      <button
+                        style={btnFail}
+                        onClick={() => handleQuickResult(card, false)}
+                        disabled={resultMutation.isLoading}
+                      >
+                        FAIL
+                      </button>
+                    </div>
                   )}
                 
-                  {/* FAIL */}
-                  {!isPreVibration && (
-                    <button
-                      style={btnFail}
-                      onClick={() => handleQuickResult(card, false)}
-                      disabled={resultMutation.isLoading}
-                    >
-                      FAIL
-                    </button>
-                  )}
+                  {/* Row 2: RUNNING / REMARK */}
+                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                    {a.status === "PENDING" && (
+                      <button
+                        style={btnRunning}
+                        onClick={() => handleStartRunning(card)}
+                        disabled={statusMutation.isLoading}
+                      >
+                        RUNNING
+                      </button>
+                    )}
                 
-                  {/* RUNNING */}
-                  {a.status === "PENDING" && (
                     <button
-                      style={btnRunning}
-                      onClick={() => handleStartRunning(card)}
-                      disabled={statusMutation.isLoading}
+                      style={btnRemark}
+                      onClick={async () => {
+                        const text = await prompt.input(
+                          "Remark",
+                          "Enter any special note",
+                          a.remark ?? ""
+                        );
+                        if (text !== null) {
+                          patchAssignmentMutation.mutate({
+                            assignmentId: a.id,
+                            payload: { remark: text },
+                          });
+                        }
+                      }}
                     >
-                      RUNNING
+                      REMARK
                     </button>
-                  )}
-                
-                  {/* REMARK */}
-                  <button
-                    style={btnRemark}
-                    onClick={async () => {
-                      const text = await prompt.input(
-                        "Remark",
-                        "Enter any special note",
-                        a.remark ?? ""
-                      );
-                      if (text !== null) {
-                        patchAssignmentMutation.mutate({
-                          assignmentId: a.id,
-                          payload: { remark: text },
-                        });
-                      }
-                    }}
-                  >
-                    REMARK
-                  </button>
+                  </div>
                 </div>
+
 
 
 
@@ -612,6 +613,7 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
 
