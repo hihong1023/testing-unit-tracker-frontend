@@ -9,6 +9,9 @@ import {
   type UnitDetails,
 } from "../api";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 /* ---------- helpers ---------- */
 
 function formatDateFromISO(value?: string | null): string {
@@ -106,8 +109,10 @@ function MatrixTable({
         statusLabel: string;
         statusKind: CellStatusKind;
         passed?: boolean;
+        remark?: string | null;
       }
     >;
+
   }[];
   steps: TestStep[];
   compact?: boolean;
@@ -119,6 +124,12 @@ function MatrixTable({
   const headerH = compact ? 52 : 64;
   const unitColW = compact ? 80 : 90;
   const stepColW = compact ? 90 : 150;
+
+  const [hoverRemark, setHoverRemark] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
 
   return (
     <div
@@ -275,21 +286,44 @@ function MatrixTable({
                       verticalAlign: "top",
                     }}
                   >
-                    <div
-                      style={{
-                        borderRadius: 8,
-                        border: `1px solid ${border}`,
-                        background: bg,
+                  <div
+                    style={{
+                      position: "relative", // 👈 ADD
+                      borderRadius: 8,
+                      border: `1px solid ${border}`,
+                      background: bg,
+                      padding: compact ? "3px 4px" : "4px 6px",
+                      minHeight: compact ? 42 : 46,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      overflow: "hidden",
+                    }}
+                  >
+                      {/* 🛈 icon */}
+                      {cell.remark && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 4,
+                            right: 6,
+                            fontSize: 12,
+                            cursor: "default",
+                          }}
+                          onMouseEnter={(e) =>
+                            setHoverRemark({
+                              x: e.clientX,
+                              y: e.clientY,
+                              text: cell.remark!,
+                            })
+                          }
+                          onMouseLeave={() => setHoverRemark(null)}
+                        >
+                          🛈
+                        </span>
+                      )}
 
-                        padding: compact ? "3px 4px" : "4px 6px",
-                        minHeight: compact ? 42 : 46, // ✅ smaller height
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
 
-                        overflow: "hidden",
-                      }}
-                    >
                       <div
                         title={displayTester(cell.tester) || "-"}
                         style={{
@@ -344,6 +378,28 @@ function MatrixTable({
           ))}
         </tbody>
       </table>
+      {hoverRemark && (
+        <div
+          style={{
+            position: "fixed",
+            top: hoverRemark.y + 12,
+            left: hoverRemark.x + 12,
+            zIndex: 9999,
+            maxWidth: 320,
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            padding: "0.5rem 0.6rem",
+            fontSize: 12,
+            pointerEvents: "none",
+          }}
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {hoverRemark.text}
+          </ReactMarkdown>
+        </div>
+      )}
     </div>
   );
 }
@@ -529,7 +585,15 @@ export default function MatrixViewPage() {
             }
           }
 
-          cells[step.id] = { tester, date, statusLabel, statusKind, passed };
+          cells[step.id] = {
+            tester,
+            date,
+            statusLabel,
+            statusKind,
+            passed,
+            remark: a?.remark ?? null, // 👈 ADD THIS
+          };
+
         }
       } else {
         for (const step of stepsOrdered) {
@@ -776,6 +840,7 @@ export default function MatrixViewPage() {
     </div>
   );
 }
+
 
 
 
