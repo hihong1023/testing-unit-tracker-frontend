@@ -466,19 +466,6 @@ function TesterQueueTesterView() {
                 
                     <button
                       style={btnRemark}
-                      onClick={async () => {
-                        const text = await prompt.input(
-                          "Remark",
-                          "Enter any special note",
-                          a.remark ?? ""
-                        );
-                        if (text !== null) {
-                          patchAssignmentMutation.mutate({
-                            assignmentId: a.id,
-                            payload: { remark: text },
-                          });
-                        }
-                      }}
                     >
                       REMARK
                     </button>
@@ -615,6 +602,7 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
 
