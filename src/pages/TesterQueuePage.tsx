@@ -497,11 +497,13 @@ function TesterQueueTesterView() {
                           display: "flex",
                           alignItems: "center",
                           gap: 6,
+                          cursor: "pointer"
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={subChecks[k]}
+                          style={{ cursor: "pointer" }}
                           onChange={() => {
                             const next = { ...subChecks, [k]: !subChecks[k] };
                 
@@ -685,6 +687,7 @@ function TesterQueueSupervisorView() {
     </div>
   );
 }
+
 
 
 
