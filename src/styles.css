@@ -1335,4 +1335,14 @@ body::-webkit-scrollbar-thumb {
   padding: 4px 6px;
 }
 
+.row-skipped {
+  opacity: 0.5;
+  background: #f8f9fb;
+}
+
+.result-pill--none {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
 
