@@ -475,6 +475,7 @@ export default function UnitDetailPage() {
                 <th>Finished at</th>
                 <th>Remark</th>
                 <th>Logs</th>
+                <th>Action</th>
 
               </tr>
             </thead>
@@ -507,12 +508,16 @@ export default function UnitDetailPage() {
                   const fileCount = r?.files?.length ?? 0;
 
                   return (
-                    <tr key={s.id}>
+                    <tr key={s.id} className={skipped ? "row-skipped" : ""}>
                       <td>{s.order}</td>
                       <td>{s.name}</td>
                       <td>{a?.tester_id || "-"}</td>
                       <td>
-                        <span className={resultClass}>{resultLabel}</span>
+                        {skipped ? (
+                          <span className="result-pill result-pill--none">N/A</span>
+                        ) : (
+                          <span className={resultClass}>{resultLabel}</span>
+                        )}
                       </td>
                       <td>{pickDisplayDate(a, r)}</td>
                       <td style={{ maxWidth: 280 }}>
@@ -612,6 +617,16 @@ export default function UnitDetailPage() {
                             </div>
                           </div>
                         )}
+                      </td>
+                      <td>
+                        <button
+                          className={`btn btn-xs ${
+                            skipped ? "btn-secondary" : "btn-outline"
+                          }`}
+                          onClick={() => handleToggleSkip(a?.id, a?.skipped)}
+                        >
+                          {skipped ? "Undo N/A" : "Mark N/A"}
+                        </button>
                       </td>
                     </tr>
                   );
