@@ -94,7 +94,7 @@ export default function UnitDetailPage() {
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
-
+  const [selectedSteps, setSelectedSteps] = useState<Set<number>>(new Set());
   if (!unitId)
     return (
       <div className="page">
@@ -346,6 +346,65 @@ export default function UnitDetailPage() {
     }
   }
 
+  function toggleStepSelection(stepId: number) {
+    setSelectedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) next.delete(stepId);
+      else next.add(stepId);
+      return next;
+    });
+  }
+  
+  function toggleSelectAll() {
+    if (!steps) return;
+  
+    if (selectedSteps.size === steps.length) {
+      setSelectedSteps(new Set());
+    } else {
+      setSelectedSteps(new Set(steps.map((s) => s.id)));
+    }
+}
+
+  async function handleBulkSkip(makeSkipped: boolean) {
+    if (selectedSteps.size === 0) return;
+  
+    const ok = await prompt.confirm(
+      `Apply "${makeSkipped ? "Mark N/A" : "Undo N/A"}" to ${
+        selectedSteps.size
+      } steps?`,
+      "Bulk Update",
+      { confirmText: "Confirm", cancelText: "Cancel" }
+    );
+    if (!ok) return;
+  
+    try {
+      const token = getToken();
+  
+      const promises = Array.from(selectedSteps).map((stepId) => {
+        const a = assignmentsByStep.get(stepId);
+        if (!a?.id) return Promise.resolve();
+  
+        return fetch(
+          `${API_BASE_URL}/assignments/${encodeURIComponent(a.id)}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ skipped: makeSkipped }),
+          }
+        );
+      });
+  
+      await Promise.all(promises);
+  
+      setSelectedSteps(new Set());
+      await qc.invalidateQueries({ queryKey: ["unit", unitId] });
+    } catch (err: any) {
+      prompt.alert(`Bulk update failed: ${err.message}`, "Error");
+    }
+  }
   async function saveRemark(assignId: string, value: string | null) {
     try {
       const token = getToken();
@@ -456,6 +515,23 @@ export default function UnitDetailPage() {
 
       <section className="card unit-detail-steps-card">
         <div className="card__header">
+          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <button
+              className="btn btn-outline btn-sm"
+              disabled={selectedSteps.size === 0}
+              onClick={() => handleBulkSkip(true)}
+            >
+              Mark selected N/A
+            </button>
+          
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={selectedSteps.size === 0}
+              onClick={() => handleBulkSkip(false)}
+            >
+              Undo N/A
+            </button>
+          </div>
           <div>
             <div className="card__title">Test steps</div>
             <div className="card__subtitle">
@@ -468,6 +544,13 @@ export default function UnitDetailPage() {
           <table className="unit-detail-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={steps && selectedSteps.size === steps.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th>#</th>
                 <th>Step</th>
                 <th>Tester</th>
@@ -509,6 +592,13 @@ export default function UnitDetailPage() {
 
                   return (
                     <tr key={s.id} className={skipped ? "row-skipped" : ""}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedSteps.has(s.id)}
+                          onChange={() => toggleStepSelection(s.id)}
+                        />
+                      </td>
                       <td>{s.order}</td>
                       <td>{s.name}</td>
                       <td>{a?.tester_id || "-"}</td>
