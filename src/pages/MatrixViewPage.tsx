@@ -74,7 +74,7 @@ function cellBackground(kind: CellStatusKind, passed?: boolean): string {
   if (kind === "FAIL") return "#f08d8dff";
   if (kind === "RUNNING") return "#cef010ff";
   if (kind === "OVERDUE") return "#d6b910ff";
-  if (kind === "SKIPPED") return "#e5e7eb";
+  if (kind === "SKIPPED") return "#f3f4f6";
   return "#e5e7eb";
 }
 
@@ -83,7 +83,7 @@ function cellBorderColor(kind: CellStatusKind, passed?: boolean): string {
   if (kind === "FAIL") return "#ef4444";
   if (kind === "RUNNING") return "#6b5838ff";
   if (kind === "OVERDUE") return "#cc7000";
-  if (kind === "SKIPPED") return "#d1d5db";
+  if (kind === "SKIPPED") return "#9ca3af";
   return "#d1d5db";
 }
 
