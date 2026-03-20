@@ -532,56 +532,57 @@ export default function MatrixViewPage() {
           let statusKind: CellStatusKind = "PENDING";
           let passed: boolean | undefined = undefined;
 
+          // ✅ CLEAN PRIORITY LOGIC
+          
           if (!a) {
-            // keep PENDING
+            statusKind = "PENDING";
+            statusLabel = "PENDING";
+          
           } else if (skipped) {
             statusKind = "SKIPPED";
             statusLabel = "N/A";
+          
+          } else if (r && typeof r.passed === "boolean") {
+            // ✅ RESULT overrides everything
+            statusKind = r.passed ? "PASS" : "FAIL";
+            statusLabel = r.passed ? "PASS" : "FAIL";
+            passed = r.passed;
+          
+          } else if (a.actual_start_at && !a.actual_end_at) {
+            // ✅ currently running
+            statusKind = "RUNNING";
+            statusLabel = "RUNNING";
+          
           } else {
-            const raw = (a.status || "").toString().toUpperCase();
-
-            if (raw === "PASS" || raw === "FAIL") {
-              statusKind = raw as CellStatusKind;
-              statusLabel = raw;
-              passed = raw === "PASS";
-            } else if (raw === "RUNNING") {
-              statusKind = "RUNNING";
-              statusLabel = "RUNNING";
-            } else {
-              // derive from dates
-              let startStr: string | null = null;
-              if (typeof a.start_at === "string") startStr = a.start_at.slice(0, 10);
-              else if (a.start_at instanceof Date) startStr = localYYYYMMDD(a.start_at);
-              else if (a.start_at) {
-                try {
-                  startStr = localYYYYMMDD(new Date(a.start_at));
-                } catch {
-                  startStr = null;
-                }
+            // ✅ schedule-based fallback
+            let startStr: string | null = null;
+          
+            if (typeof a.start_at === "string") {
+              startStr = a.start_at.slice(0, 10);
+            } else if (a.start_at instanceof Date) {
+              startStr = localYYYYMMDD(a.start_at);
+            } else if (a.start_at) {
+              try {
+                startStr = localYYYYMMDD(new Date(a.start_at));
+              } catch {
+                startStr = null;
               }
-
-              if (startStr) {
-                if (startStr < todayKey) {
-                  statusKind = "OVERDUE";
-                  statusLabel = "OVERDUE";
-                } else if (startStr === todayKey) {
-                  statusKind = "RUNNING";
-                  statusLabel = "RUNNING";
-                } else {
-                  statusKind = "PENDING";
-                  statusLabel = "PENDING";
-                }
+            }
+          
+            if (startStr) {
+              if (startStr < todayKey) {
+                statusKind = "OVERDUE";
+                statusLabel = "OVERDUE";
+              } else if (startStr === todayKey) {
+                statusKind = "RUNNING";
+                statusLabel = "RUNNING";
               } else {
                 statusKind = "PENDING";
                 statusLabel = "PENDING";
               }
-
-              // fallback for legacy data
-              if ((raw !== "PASS" && raw !== "FAIL" && raw !== "RUNNING") && r) {
-                statusKind = r.passed ? "PASS" : "FAIL";
-                statusLabel = r.passed ? "PASS" : "FAIL";
-                passed = !!r.passed;
-              }
+            } else {
+              statusKind = "PENDING";
+              statusLabel = "PENDING";
             }
           }
 
