@@ -203,7 +203,10 @@ function TesterQueueTesterView() {
 
     // Only include non-skipped assignments that are PENDING or RUNNING
     const base = assignments.filter(
-      (a) => !a.skipped && (a.status === "PENDING" || a.status === "RUNNING")
+      (a) =>
+        !a.skipped &&
+        a.prev_passed && 
+        ["PENDING", "RUNNING", null].includes(a.status as any)
     );
 
     const todayList = base;
