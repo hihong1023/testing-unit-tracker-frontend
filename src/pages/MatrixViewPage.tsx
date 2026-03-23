@@ -540,7 +540,7 @@ export default function MatrixViewPage() {
           
           } else if (skipped) {
             statusKind = "SKIPPED";
-            statusLabel = "N/A";
+            statusLabel = "SKIPPED";
           
           } else if (r && typeof r.passed === "boolean") {
             // ✅ RESULT overrides everything
@@ -702,7 +702,7 @@ export default function MatrixViewPage() {
           <p>
             Full-screen overview of all units vs all test steps. Cells show{" "}
             <strong>tester</strong>, <strong>date</strong> and <strong>result</strong>. Skipped
-            steps are marked as <strong>N/A</strong>.
+            steps are marked as <strong>SKIPPED</strong>.
           </p>
         </div>
 
